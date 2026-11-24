@@ -32,3 +32,6 @@ Frontend is not wired to this API. DTO mapping from existing string demo IDs to 
 ```sh
 dotnet test tests/MataHR.Tests/MataHR.Tests.csproj
 ```
+
+## Enterprise foundation branch
+ABP modular foundation (10.7.1), domain rules and first structured organisation slice added. See [frontend traceability](docs/frontend-traceability.md). Existing API host remains the entry point. Use a fresh disposable SQLite database because schema migration is not implemented. This is not the complete ABP identity/permission migration.

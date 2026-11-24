@@ -21,7 +21,9 @@ b.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).
  };
 });
 b.Services.AddAuthorization();b.Services.AddRateLimiter(o=>{o.RejectionStatusCode=429;o.AddPolicy("login",ctx=>RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString()??"unknown",_=>new FixedWindowRateLimiterOptions{PermitLimit=10,Window=TimeSpan.FromMinutes(1),QueueLimit=0}));});
-var app=b.Build();app.UseExceptionHandler();
+await b.AddApplicationAsync<MataHrHostModule>();
+var app=b.Build();
+await app.InitializeApplicationAsync();app.UseExceptionHandler();
 app.Use(async(ctx,next)=>{if(!HttpMethods.IsGet(ctx.Request.Method)&&!HttpMethods.IsHead(ctx.Request.Method)&&!HttpMethods.IsOptions(ctx.Request.Method)&&ctx.Request.Headers["X-MataHR-Request"]!="1"){ctx.Response.StatusCode=400;return;}await next();});
 app.UseAuthentication();app.UseAuthorization();app.UseRateLimiter();
 if(app.Environment.IsDevelopment())app.MapOpenApi();
@@ -53,7 +55,7 @@ var api=app.MapGroup("/api").RequireAuthorization().AddEndpointFilter(async(cont
  if(!await db.PrivacyAcks.AnyAsync(x=>x.TenantId==t&&x.AccountId==a&&x.Version==Access.PrivacyVersion))return Results.Json(new{error="Privacy acknowledgement required."},statusCode:403);
  try{return await next(context);}catch(RuleException e){return Results.Problem(e.Message,statusCode:e.Status);}catch(DbUpdateException){return Results.Conflict(new{error="Concurrent or duplicate update. Refresh and retry."});}
 });
-api.MapPeople();api.MapAttendance();api.MapLeave();api.MapPayroll();
+api.MapOrganisation();api.MapPeople();api.MapAttendance();api.MapLeave();api.MapPayroll();
 app.Run();
 public partial class Program {}
 public record LoginInput(Guid TenantId,string? Email,string? Password);

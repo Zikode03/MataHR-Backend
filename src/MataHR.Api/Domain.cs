@@ -5,7 +5,10 @@ public abstract class TenantRow { public Guid Id {get;set;}=Guid.NewGuid(); publ
 public sealed class Tenant { public Guid Id {get;set;} public string Name {get;set;}=""; }
 public sealed class Account:TenantRow { public string Email {get;set;}=""; [JsonIgnore] public string PasswordHash {get;set;}=""; public string Roles {get;set;}="Employee"; public Guid? EmployeeId {get;set;} public bool Active {get;set;}=true; }
 public sealed class Employee:TenantRow { public string Number {get;set;}=""; public string Name {get;set;}=""; public string Email {get;set;}=""; public string Department {get;set;}=""; public string Position {get;set;}=""; public string ContractType {get;set;}=""; public DateOnly Started {get;set;} public DateOnly? Exited {get;set;} public Guid? ManagerId {get;set;} }
-public sealed class Department:TenantRow { public string Name {get;set;}=""; }
+public sealed class Department:TenantRow { public string Name {get;set;}=""; public Guid? BranchId {get;set;} }
+public sealed class Branch:TenantRow { public string Name {get;set;}=""; }
+public sealed class Position:TenantRow { public Guid DepartmentId {get;set;} public string Name {get;set;}=""; }
+public sealed class Assignment:TenantRow { public Guid EmployeeId {get;set;} public Guid PositionId {get;set;} public Guid? ManagerId {get;set;} }
 public sealed class Contract:TenantRow { public Guid EmployeeId {get;set;} public string Reference {get;set;}=""; public DateOnly Start {get;set;} public DateOnly? End {get;set;} public string Status {get;set;}="Draft"; }
 public sealed class EmploymentEvent:TenantRow { public Guid EmployeeId {get;set;} public string Description {get;set;}=""; public DateTimeOffset At {get;set;}=DateTimeOffset.UtcNow; }
 public sealed class WorkLocation:TenantRow { public string Name {get;set;}=""; public string Kind {get;set;}=""; public bool Active {get;set;}=true; }
@@ -24,11 +27,18 @@ public sealed class Audit:TenantRow { public Guid ActorId {get;set;} public stri
 public sealed class Integration:TenantRow { public string Kind {get;set;}=""; public string Mode {get;set;}="internal"; public string Provider {get;set;}=""; public string Reference {get;set;}=""; }
 public sealed class Db(DbContextOptions<Db> options):DbContext(options) {
  public DbSet<Tenant> Tenants=>Set<Tenant>(); public DbSet<Account> Accounts=>Set<Account>();
- public DbSet<Employee> Employees=>Set<Employee>(); public DbSet<Department> Departments=>Set<Department>(); public DbSet<Contract> Contracts=>Set<Contract>(); public DbSet<EmploymentEvent> EmploymentEvents=>Set<EmploymentEvent>();
+ public DbSet<Employee> Employees=>Set<Employee>(); public DbSet<Department> Departments=>Set<Department>(); public DbSet<Branch> Branches=>Set<Branch>(); public DbSet<Position> Positions=>Set<Position>(); public DbSet<Assignment> Assignments=>Set<Assignment>(); public DbSet<Contract> Contracts=>Set<Contract>(); public DbSet<EmploymentEvent> EmploymentEvents=>Set<EmploymentEvent>();
  public DbSet<WorkLocation> Locations=>Set<WorkLocation>(); public DbSet<Schedule> Schedules=>Set<Schedule>(); public DbSet<Holiday> Holidays=>Set<Holiday>(); public DbSet<Session> Sessions=>Set<Session>(); public DbSet<AttendanceRequest> AttendanceRequests=>Set<AttendanceRequest>();
  public DbSet<LeavePolicy> Policies=>Set<LeavePolicy>(); public DbSet<Entitlement> Entitlements=>Set<Entitlement>(); public DbSet<LeaveRequest> Leave=>Set<LeaveRequest>();
  public DbSet<Salary> Salaries=>Set<Salary>(); public DbSet<Benefit> Benefits=>Set<Benefit>(); public DbSet<PayrollRun> Runs=>Set<PayrollRun>(); public DbSet<PrivacyAck> PrivacyAcks=>Set<PrivacyAck>(); public DbSet<Audit> Audits=>Set<Audit>(); public DbSet<Integration> Integrations=>Set<Integration>();
  protected override void OnModelCreating(ModelBuilder b){
+ b.Entity<Branch>().HasIndex(x=>new{x.TenantId,x.Name}).IsUnique(); b.Entity<Position>().HasIndex(x=>new{x.TenantId,x.DepartmentId,x.Name}).IsUnique(); b.Entity<Assignment>().HasIndex(x=>new{x.TenantId,x.EmployeeId}).IsUnique();
+ b.Entity<Employee>().HasAlternateKey(x=>new{x.TenantId,x.Id}); b.Entity<Branch>().HasAlternateKey(x=>new{x.TenantId,x.Id}); b.Entity<Department>().HasAlternateKey(x=>new{x.TenantId,x.Id}); b.Entity<Position>().HasAlternateKey(x=>new{x.TenantId,x.Id});
+ b.Entity<Department>().HasOne<Branch>().WithMany().HasForeignKey(x=>new{x.TenantId,x.BranchId}).HasPrincipalKey(x=>new{x.TenantId,x.Id}).OnDelete(DeleteBehavior.Restrict);
+ b.Entity<Position>().HasOne<Department>().WithMany().HasForeignKey(x=>new{x.TenantId,x.DepartmentId}).HasPrincipalKey(x=>new{x.TenantId,x.Id}).OnDelete(DeleteBehavior.Restrict);
+ b.Entity<Assignment>().HasOne<Employee>().WithMany().HasForeignKey(x=>new{x.TenantId,x.EmployeeId}).HasPrincipalKey(x=>new{x.TenantId,x.Id}).OnDelete(DeleteBehavior.Restrict);
+ b.Entity<Assignment>().HasOne<Position>().WithMany().HasForeignKey(x=>new{x.TenantId,x.PositionId}).HasPrincipalKey(x=>new{x.TenantId,x.Id}).OnDelete(DeleteBehavior.Restrict);
+ b.Entity<Assignment>().HasOne<Employee>().WithMany().HasForeignKey(x=>new{x.TenantId,x.ManagerId}).HasPrincipalKey(x=>new{x.TenantId,x.Id}).OnDelete(DeleteBehavior.Restrict);
  b.Entity<Account>().HasIndex(x=>new{x.TenantId,x.Email}).IsUnique(); b.Entity<Employee>().HasIndex(x=>new{x.TenantId,x.Number}).IsUnique();
  b.Entity<Department>().HasIndex(x=>new{x.TenantId,x.Name}).IsUnique(); b.Entity<Schedule>().HasIndex(x=>new{x.TenantId,x.EmployeeId}).IsUnique(); b.Entity<Holiday>().HasIndex(x=>new{x.TenantId,x.Date}).IsUnique(); b.Entity<Entitlement>().HasIndex(x=>new{x.TenantId,x.EmployeeId,x.PolicyId,x.Year}).IsUnique();
  b.Entity<Session>().HasIndex(x=>new{x.TenantId,x.EmployeeId}).IsUnique().HasFilter("Status = 'Open'");
