@@ -1,0 +1,12 @@
+name: Backend build
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet build src/MataHR.Api/MataHR.Api.csproj --configuration Release
+      - run: dotnet test tests/MataHR.Tests/MataHR.Tests.csproj --configuration Release
