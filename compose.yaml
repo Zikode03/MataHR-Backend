@@ -7,6 +7,7 @@ services:
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
     ports:
       - "127.0.0.1:${MSSQL_PORT:-14336}:1433"
+      - "[::1]:${MSSQL_PORT:-14336}:1433"
     volumes:
       - matahr-sql-data:/var/opt/mssql
     healthcheck:
