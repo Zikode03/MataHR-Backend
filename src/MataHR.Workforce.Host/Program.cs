@@ -171,7 +171,17 @@ app.UseRateLimiter();
 app.UseUnitOfWork();
 app.UseAuditing();
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+{
     app.MapOpenApi();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "MataHR API v1");
+        options.DocumentTitle = "MataHR API Explorer";
+        options.EnableFilter();
+        options.DisplayRequestDuration();
+        options.UseRequestInterceptor("(request) => { request.headers['X-MataHR-Request'] = '1'; request.credentials = 'same-origin'; return request; }");
+    });
+}
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 app.Run();

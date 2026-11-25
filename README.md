@@ -15,6 +15,7 @@ See the [backend guide](docs/daily-workspace-backend.md) for architecture, workf
 | Database | MataHR |
 | API | https://localhost:7043 |
 | Health | /health |
+| API explorer | /swagger |
 | OpenAPI | /openapi/v1.json |
 
 Keep the SQL password in the ignored `.env` as `MSSQL_SA_PASSWORD`. Use literal single quotes for dotenv values containing dollar signs. Do not commit credentials. Account passwords and the SQL password are different credentials.
@@ -55,3 +56,7 @@ The frontend remains a separate demo until its stores and DTOs are connected to 
 Accounts use native ABP Identity users and roles, lockout, security stamps, password reset tokens and authenticator MFA with one-use recovery codes. Password reset delivery requires `Auth:RecoveryEnabled`, an HTTPS `Auth:PasswordResetUrl`, and configured ABP email delivery. No reset mail is sent by default. MFA enrollment and recovery endpoints are documented in the backend guide.
 
 Compensation revisions and benefit enrollments are effective-dated on month boundaries. Payroll freezes source fingerprints and rejects changed sources before approval. Undated legacy pay records require reconciliation. Leave freezes its working dates; older leave without a matching calendar fails closed until reconciled. Migration preserves legacy account tables but does not silently import credentials into Identity.
+
+## Browse and try the API locally
+
+Open `https://localhost:7043/swagger` while the Development host is running. Visual Studio opens this explorer by default. Expand an endpoint and choose **Try it out**. The explorer supplies the required request header and uses same-origin session cookies. Use `/api/auth/login` with your configured tenant/account, then acknowledge the privacy notice through `/api/auth/privacy`; role permissions still govern each request. No credentials are embedded in the explorer. Swagger UI and the OpenAPI specification are available only in Development and Testing.

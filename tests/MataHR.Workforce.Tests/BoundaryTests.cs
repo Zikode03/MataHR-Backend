@@ -17,6 +17,14 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync() + "\n" + f.Logs.Text);
         using var schema = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.True(schema.RootElement.GetProperty("paths").TryGetProperty("/api/employees", out _));
+        var explorer = await client.GetAsync("/swagger/index.html");
+        explorer.EnsureSuccessStatusCode();
+        Assert.Contains("MataHR API Explorer", await explorer.Content.ReadAsStringAsync());
+        var initializer = await client.GetStringAsync("/swagger/index.js");
+        Assert.Contains("/openapi/v1.json", initializer);
+        Assert.Contains("X-MataHR-Request", initializer);
+        Assert.Contains("same-origin", initializer);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/swagger/swagger-ui-bundle.js")).StatusCode);
     }
 
     [Fact]
