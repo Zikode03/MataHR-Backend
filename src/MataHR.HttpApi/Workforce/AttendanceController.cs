@@ -8,6 +8,8 @@ namespace MataHR.HttpApi;
 [Authorize, Route("api/attendance"), ApiController]
 public class AttendanceController(IAttendanceAppService service) : AbpController
 {
+    [HttpGet("current")]
+    public Task<SessionDto?> Current() => service.GetCurrentAsync();
     [HttpGet("locations")]
     public Task<List<LocationDto>> Locations() => service.GetLocationsAsync();
     [HttpPost("locations")]
@@ -18,7 +20,11 @@ public class AttendanceController(IAttendanceAppService service) : AbpController
     public Task<ScheduleDto> Schedule(ScheduleInput input) => service.SetScheduleAsync(input);
     [HttpGet("")]
     public Task<Page<SessionDto>> Get(DateOnly from, DateOnly to, [FromQuery] PageQuery input) => service.GetListAsync(from, to, input);
-    [HttpPost("clock-in")]
+    [HttpPut("locations/{id:guid}/boundary")]
+    public Task<LocationDto> Boundary(Guid id, SiteBoundaryInput input) => service.ConfigureBoundaryAsync(id, input);
+    [HttpPost("locations/{id:guid}/code")]
+    public Task<PresenceCodeDto> Code(Guid id) => service.GeneratePresenceCodeAsync(id);
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("clock"), HttpPost("clock-in")]
     public Task<SessionDto> ClockIn(ClockInput input) => service.ClockInAsync(input);
     [HttpPost("clock-out")]
     public Task<SessionDto> ClockOut() => service.ClockOutAsync();

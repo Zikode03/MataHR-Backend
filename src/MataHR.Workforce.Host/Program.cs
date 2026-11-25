@@ -71,6 +71,7 @@ b.Services.AddAuthorization();
 b.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = 429;
+    o.AddPolicy("clock", ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous", _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     o.AddPolicy("login", ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 await b.AddApplicationAsync<WorkforceHostModule>();
@@ -152,6 +153,14 @@ app.Use(async (ctx, next) =>
             {
                 var account = Guid.Parse(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
                 var db = ctx.RequestServices.GetRequiredService<WorkforceDbContext>();
+                var accountRow = await db.Set<Volo.Abp.Identity.IdentityUser>().SingleAsync(x => x.Id == account);
+                if (accountRow.GetProperty<bool>("RequirePasswordChange"))
+                {
+                    ctx.Response.StatusCode = 403;
+                    await ctx.Response.WriteAsJsonAsync(new { error = "Change your temporary password before opening your workspace." });
+                    return;
+                }
+
                 if (!await db.Set<PrivacyAcceptance>().AnyAsync(x => x.AccountId == account && x.Version == WorkforceAuthenticationService.PrivacyVersion))
                 {
                     ctx.Response.StatusCode = 403;
@@ -182,6 +191,8 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
         options.UseRequestInterceptor("(request) => { request.headers['X-MataHR-Request'] = '1'; request.credentials = 'same-origin'; return request; }");
     });
 }
+
+app.MapGet("/api/auth/config", () => Results.Ok(new { tenantId = b.Configuration["Bootstrap:TenantId"] })).AllowAnonymous();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 app.Run();

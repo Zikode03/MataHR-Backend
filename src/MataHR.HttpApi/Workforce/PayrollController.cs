@@ -8,6 +8,10 @@ namespace MataHR.HttpApi;
 [Authorize, Route("api/payroll"), ApiController]
 public class PayrollController(IPayrollAppService service) : AbpController
 {
+    [Authorize(WorkforcePermissions.PayrollManage),HttpGet("documents/{id:guid}/download")]
+    public Task<DocumentContent> ProviderDocument(Guid id)=>service.DownloadProviderDocumentAsync(id);
+    [HttpGet("documents")]
+    public Task<List<DocumentDto>> ProviderDocuments() => service.GetProviderDocumentsAsync();
     [HttpGet("salaries")]
     public Task<List<CompensationDto>> Salaries() => service.GetSalariesAsync();
     [HttpPut("salaries")]

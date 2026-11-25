@@ -20,7 +20,7 @@ public record EmployeeHistoryDto(Guid Id, DateOnly EffectiveDate, string Descrip
 public record BranchDto(Guid Id, string Name);
 public record DepartmentDto(Guid Id, Guid BranchId, string Name);
 public record PositionDto(Guid Id, Guid DepartmentId, string Name);
-public record StructureDto(IReadOnlyList<BranchDto> Branches, IReadOnlyList<DepartmentDto> Departments, IReadOnlyList<PositionDto> Positions, IReadOnlyList<EmployeeDto> Employees, IReadOnlyList<LayoutDto> Layout);
+public record StructureDto(IReadOnlyList<BranchDto> Branches, IReadOnlyList<DepartmentDto> Departments, IReadOnlyList<PositionDto> Positions, IReadOnlyList<OrganisationPersonDto> Employees, IReadOnlyList<LayoutDto> Layout, ChartPointDto? Company = null);
 public record BranchInput(string Name);
 public record DepartmentInput(Guid BranchId, string Name);
 public record PositionInput(Guid DepartmentId, string Name);
@@ -32,12 +32,12 @@ public record ContractDecision(string Status, string Note, Guid? DocumentId, str
 public record DocumentInput(Guid EmployeeId, string Name, string ContentType, string ContentBase64, string Kind = "Employee", bool EmployeeVisible = true, DateOnly? Expires = null);
 public record DocumentDto(Guid Id, Guid EmployeeId, string Name, string Kind, string ContentType, int Size, string Sha256, DateOnly? Expires, bool Verified);
 public record DocumentContent(string Name, string ContentType, string ContentBase64, string Sha256);
-public record LocationDto(Guid Id, string Name, string Kind, bool Active);
+public record LocationDto(Guid Id, string Name, string Kind, bool Active, double? Latitude = null, double? Longitude = null, int RadiusMeters = 150);
 public record LocationInput(string Name, string Kind);
 public record ScheduleInput(Guid EmployeeId, int DaysMask, TimeOnly Start, TimeOnly End, int GraceMinutes);
 public record ScheduleDto(Guid EmployeeId, int DaysMask, TimeOnly Start, TimeOnly End, int GraceMinutes);
-public record SessionDto(Guid Id, Guid EmployeeId, Guid LocationId, DateOnly Date, DateTimeOffset Start, DateTimeOffset? End, string Status, string Evidence, string ConcurrencyStamp);
-public record ClockInput(Guid LocationId);
+public record SessionDto(Guid Id, Guid EmployeeId, Guid LocationId, DateOnly Date, DateTimeOffset Start, DateTimeOffset? End, string Status, string Evidence, string ConcurrencyStamp, string ExceptionReason = "", double? DistanceMeters = null, double? AccuracyMeters = null);
+public record ClockInput(Guid LocationId, string? SiteCode = null, double? Latitude = null, double? Longitude = null, double? AccuracyMeters = null, DateTimeOffset? ObservedAt = null, string? ExceptionReason = null);
 public record DecisionInput(string Status, string Note, string ConcurrencyStamp);
 public record TimeRequestInput(string Kind, Guid? SessionId, DateOnly Date, DateTimeOffset Start, DateTimeOffset End, string Reason);
 public record TimeRequestDto(Guid Id, Guid EmployeeId, string Kind, Guid? SessionId, DateOnly Date, DateTimeOffset Start, DateTimeOffset End, string Reason, string Status, string ConcurrencyStamp);
@@ -65,3 +65,9 @@ public record AccountDto(Guid Id, string Email, string[] Roles, Guid? EmployeeId
 public record AccountUpdateInput(string[] Roles, Guid? EmployeeId, bool Active, string ConcurrencyStamp);
 public record DocumentVerificationInput(string Purpose = "General", string Attestation = "", DateOnly? SignedOn = null);
 public record RolePermissionInput(string Role, string Permission, bool Granted);
+public record SiteBoundaryInput(double Latitude, double Longitude, int RadiusMeters);
+public record PresenceCodeDto(string Code, DateTimeOffset ExpiresAt);
+public record ChartPointDto(double X, double Y);
+public record EmployeeLinkDto(Guid Id, string Number, string Name);
+public record RoleGrantDto(string Permission, bool Granted);
+public record OrganisationPersonDto(Guid Id, string Number, string Name, Guid? PositionId, Guid? ManagerId, bool Active, string ConcurrencyStamp);

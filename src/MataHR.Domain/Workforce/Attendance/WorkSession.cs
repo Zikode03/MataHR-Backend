@@ -11,6 +11,26 @@ public class WorkSession : WorkforceRow
     [Volo.Abp.Auditing.Audited]
     public string Status { get; private set; } = "Open";
     public string Evidence { get; private set; } = "Unverified";
+    public Guid? PresenceChallengeId { get; private set; }
+    public double? DistanceMeters { get; private set; }
+    public double? AccuracyMeters { get; private set; }
+    public string ExceptionReason { get; private set; } = "";
+
+    public void RecordPresence(Guid challenge, double distance, double accuracy)
+    {
+        DomainGuard.Against(challenge == Guid.Empty || !double.IsFinite(distance) || distance < 0 || !double.IsFinite(accuracy) || accuracy < 0 || accuracy > 50, "InvalidPresenceEvidence", "Invalid presence evidence.");
+        PresenceChallengeId = challenge;
+        DistanceMeters = Math.Round(distance, 1);
+        AccuracyMeters = Math.Round(accuracy, 1);
+        Evidence = "On-site code + GPS checked";
+    }
+
+    public void RecordException(string reason)
+    {
+        ExceptionReason = DomainGuard.Text(reason, "PresenceExceptionReason", 1000);
+        Evidence = "Unverified";
+    }
+
     public Guid? ReviewedBy { get; private set; }
     public string ReviewNote { get; private set; } = "";
 

@@ -24,6 +24,7 @@ public class WorkforceHostModule : AbpModule
             o.EntityHistorySelectors.AddAllEntities();
         });
         Configure<Volo.Abp.PermissionManagement.PermissionManagementOptions>(o => o.SaveStaticPermissionsToDatabase = false);
+        context.Services.Configure<MataHR.Workforce.LegacyImportOptions>(context.Services.GetConfiguration().GetSection("LegacyImport"));
         context.Services.TryAddTransient<MataHR.Workforce.Contracts.IAccountRecoveryDelivery, EmailRecoveryDelivery>();
         context.Services.AddSingleton<TimeProvider>(TimeProvider.System);
         context.Services.AddIdentityCore<Volo.Abp.Identity.IdentityUser>().AddDefaultTokenProviders();

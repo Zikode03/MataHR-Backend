@@ -1,3 +1,4 @@
+using Volo.Abp.Authorization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -9,6 +10,18 @@ using MataHR.Workforce.Contracts;
 namespace MataHR.Workforce;
 public class PayrollAppService(IRepository<Worker, Guid> workers, IRepository<WorkforceAudit, Guid> audits, IRepository<Compensation, Guid> salaries, IRepository<EmployeeBenefit, Guid> benefits, IRepository<WorkSession, Guid> sessions, IRepository<TimeRequest, Guid> timeRequests, IRepository<Absence, Guid> leave, IRepository<PayRun, Guid> runs, IRepository<ReleasedPayslip, Guid> payslips, IRepository<SecureDocument, Guid> documents, CalendarService calendar, PayrollCalculator calculator) : WorkforceService(workers, audits), IPayrollAppService
 {
+    [Authorize(WorkforcePermissions.PayrollManage)]
+    public virtual async Task<DocumentContent> DownloadProviderDocumentAsync(Guid id)
+    {
+        await AuthorizationService.CheckAsync(WorkforcePermissions.PayrollManage);
+        var doc=await Get(documents,id);
+        Require(doc.Kind=="Payslip","A payroll-provider payslip is required.");
+        await Audit("Payslip.EvidenceDownloaded",id);
+        return new(doc.Name,doc.ContentType,Convert.ToBase64String(doc.Content),doc.Sha256);
+    }
+
+    [Authorize(WorkforcePermissions.PayrollManage)]
+    public virtual async Task<List<DocumentDto>> GetProviderDocumentsAsync() => await Queries.ToListAsync((await documents.GetQueryableAsync()).Where(x => x.Kind == "Payslip").Select(x => new DocumentDto(x.Id, x.EmployeeId, x.Name, x.Kind, x.ContentType, x.Content.Length, x.Sha256, x.Expires, x.VerifiedBy.HasValue)));
     [Authorize(WorkforcePermissions.PayrollManage)]
     public virtual async Task<List<CompensationDto>> GetSalariesAsync() => (await salaries.GetListAsync()).Select(x => new CompensationDto(x.EmployeeId, x.Basic, x.Allowance, x.Deduction, x.HourlyRate, x.OvertimeMultiplier, x.EffectiveFrom)).ToList();
     [Authorize(WorkforcePermissions.PayrollManage), SerializableCommand]

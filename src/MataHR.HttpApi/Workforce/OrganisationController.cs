@@ -18,6 +18,8 @@ public class OrganisationController(IOrganisationAppService service) : AbpContro
     public Task<PositionDto> Position(PositionInput input) => service.CreatePositionAsync(input);
     [HttpPut("assignments")]
     public Task<EmployeeDto> Assign(AssignmentInput input) => service.AssignAsync(input);
+    [HttpPut("canvas")]
+    public Task Canvas(ChartPointDto input) => service.SaveCanvasAsync(input);
     [HttpPut("layout")]
     public Task Layout(List<LayoutDto> input) => service.SaveLayoutAsync(input);
 }

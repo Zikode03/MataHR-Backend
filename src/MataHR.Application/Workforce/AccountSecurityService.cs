@@ -1,3 +1,4 @@
+using Volo.Abp.Data;
 using Microsoft.AspNetCore.Identity;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
@@ -56,6 +57,8 @@ public class AccountSecurityService(IdentityUserManager users, ICurrentUser curr
     {
         var user = await Own();
         Check(await users.ChangePasswordAsync(user, input.CurrentPassword, input.NewPassword));
+        user.SetProperty("RequirePasswordChange", false);
+        Check(await users.UpdateAsync(user));
         Check(await users.UpdateSecurityStampAsync(user));
     }
 

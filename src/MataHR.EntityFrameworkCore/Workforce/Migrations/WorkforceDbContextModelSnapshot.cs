@@ -297,9 +297,18 @@ namespace MataHR.EntityFrameworkCore.Workforce.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("LastModifierId");
 
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("float");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("RadiusMeters")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier")
@@ -709,6 +718,65 @@ namespace MataHR.EntityFrameworkCore.Workforce.Migrations
                     b.ToTable("MataLeaveBalanceEntry", (string)null);
                 });
 
+            modelBuilder.Entity("MataHR.Workforce.LegacyImportBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CommittedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<Guid>("PreparedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MataLegacyImportBatch", (string)null);
+                });
+
             modelBuilder.Entity("MataHR.Workforce.Office", b =>
                 {
                     b.Property<Guid>("Id")
@@ -757,6 +825,57 @@ namespace MataHR.EntityFrameworkCore.Workforce.Migrations
                         .IsUnique();
 
                     b.ToTable("MataOffice", (string)null);
+                });
+
+            modelBuilder.Entity("MataHR.Workforce.OrganisationCanvas", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("TenantId");
+
+                    b.Property<double>("X")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Y")
+                        .HasColumnType("float");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("MataOrganisationCanvas", (string)null);
                 });
 
             modelBuilder.Entity("MataHR.Workforce.PayRun", b =>
@@ -828,6 +947,61 @@ namespace MataHR.EntityFrameworkCore.Workforce.Migrations
                         .IsUnique();
 
                     b.ToTable("MataPayRun", (string)null);
+                });
+
+            modelBuilder.Entity("MataHR.Workforce.PresenceChallenge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<Guid>("LocationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "LocationId", "ExpiresAt");
+
+                    b.ToTable("MataPresenceChallenge", (string)null);
                 });
 
             modelBuilder.Entity("MataHR.Workforce.PrivacyAcceptance", b =>
@@ -1368,6 +1542,9 @@ namespace MataHR.EntityFrameworkCore.Workforce.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<double?>("AccuracyMeters")
+                        .HasColumnType("float");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -1386,6 +1563,9 @@ namespace MataHR.EntityFrameworkCore.Workforce.Migrations
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
+                    b.Property<double?>("DistanceMeters")
+                        .HasColumnType("float");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1393,6 +1573,10 @@ namespace MataHR.EntityFrameworkCore.Workforce.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Evidence")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExceptionReason")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -1410,6 +1594,9 @@ namespace MataHR.EntityFrameworkCore.Workforce.Migrations
                         .HasColumnName("LastModifierId");
 
                     b.Property<Guid>("LocationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("PresenceChallengeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ReviewNote")
@@ -1439,7 +1626,13 @@ namespace MataHR.EntityFrameworkCore.Workforce.Migrations
 
                     b.HasIndex("TenantId", "LocationId");
 
+                    b.HasIndex("TenantId", "PresenceChallengeId");
+
                     b.HasIndex("TenantId", "EmployeeId", "Date");
+
+                    b.HasIndex("TenantId", "EmployeeId", "PresenceChallengeId")
+                        .IsUnique()
+                        .HasFilter("[PresenceChallengeId] IS NOT NULL");
 
                     b.ToTable("MataWorkSession", (string)null);
                 });
@@ -2982,6 +3175,16 @@ namespace MataHR.EntityFrameworkCore.Workforce.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("MataHR.Workforce.PresenceChallenge", b =>
+                {
+                    b.HasOne("MataHR.Workforce.ClockLocation", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "LocationId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("MataHR.Workforce.ReleasedPayslip", b =>
                 {
                     b.HasOne("MataHR.Workforce.SecureDocument", null)
@@ -3077,6 +3280,12 @@ namespace MataHR.EntityFrameworkCore.Workforce.Migrations
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("MataHR.Workforce.PresenceChallenge", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PresenceChallengeId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("MataHR.Workforce.Worker", b =>

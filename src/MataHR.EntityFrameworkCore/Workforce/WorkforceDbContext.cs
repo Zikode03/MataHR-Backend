@@ -12,6 +12,9 @@ public class WorkforceDbContext(DbContextOptions<WorkforceDbContext> options) : 
 {
     public DbSet<Volo.Abp.Identity.IdentityUser> Users => Set<Volo.Abp.Identity.IdentityUser>();
     public DbSet<Volo.Abp.Identity.IdentityRole> Roles => Set<Volo.Abp.Identity.IdentityRole>();
+    public DbSet<PresenceChallenge> PresenceChallenges=>Set<PresenceChallenge>();
+    public DbSet<LegacyImportBatch> LegacyImportBatches=>Set<LegacyImportBatch>();
+    public DbSet<OrganisationCanvas> OrganisationCanvases=>Set<OrganisationCanvas>();
     public DbSet<Worker> WorkerRows => Set<Worker>();
     public DbSet<WorkforceUser> WorkforceUserRows => Set<WorkforceUser>();
     public DbSet<Office> OfficeRows => Set<Office>();
@@ -58,6 +61,10 @@ public class WorkforceDbContext(DbContextOptions<WorkforceDbContext> options) : 
             e.Property(nameof(WorkforceRow.TenantId)).IsRequired();
         }
 
+        b.Entity<OrganisationCanvas>().HasIndex(x=>x.TenantId).IsUnique();
+        b.Entity<PresenceChallenge>().Property(x=>x.CodeHash).HasMaxLength(64);
+        b.Entity<PresenceChallenge>().HasIndex(x=>new{x.TenantId,x.LocationId,x.ExpiresAt});
+        b.Entity<WorkSession>().HasIndex(x=>new{x.TenantId,x.EmployeeId,x.PresenceChallengeId}).IsUnique().HasFilter("[PresenceChallengeId] IS NOT NULL");
         b.Entity<Worker>().Property(x => x.Number).HasMaxLength(64);
         b.Entity<Worker>().Property(x => x.Name).HasMaxLength(160);
         b.Entity<Worker>().Property(x => x.Email).HasMaxLength(254);
@@ -96,6 +103,9 @@ public class WorkforceDbContext(DbContextOptions<WorkforceDbContext> options) : 
         b.Entity<WorkSession>().HasIndex(x => new { x.TenantId, x.EmployeeId }).IsUnique().HasFilter("[Status] = 'Open'");
         b.Entity<WorkSession>().HasIndex(x => new { x.TenantId, x.EmployeeId, x.Date });
         b.Entity<Absence>().HasIndex(x => new { x.TenantId, x.EmployeeId, x.Start });
+        b.Entity<PresenceChallenge>().HasAlternateKey(x=>new{x.TenantId,x.Id});
+        b.Entity<PresenceChallenge>().HasOne<ClockLocation>().WithMany().HasForeignKey(x=>new{x.TenantId,x.LocationId}).HasPrincipalKey(x=>new{x.TenantId,x.Id}).OnDelete(DeleteBehavior.Restrict);
+        b.Entity<WorkSession>().HasOne<PresenceChallenge>().WithMany().HasForeignKey(x=>new{x.TenantId,x.PresenceChallengeId}).HasPrincipalKey(x=>new{x.TenantId,x.Id}).OnDelete(DeleteBehavior.Restrict);
         b.Entity<WorkSession>().HasOne<ClockLocation>().WithMany().HasForeignKey(x => new { x.TenantId, x.LocationId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         b.Entity<Absence>().HasOne<AbsencePolicy>().WithMany().HasForeignKey(x => new { x.TenantId, x.PolicyId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         b.Entity<LeaveAllocation>().HasOne<AbsencePolicy>().WithMany().HasForeignKey(x => new { x.TenantId, x.PolicyId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);

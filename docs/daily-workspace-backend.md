@@ -1,6 +1,6 @@
 # Daily Workspace ABP backend
 
-The new entry point is `src/MataHR.Workforce.Host`. The original `MataHR.Api` is retained as archived source, excluded from the supported solution. It is not the ABP workflow host. Existing frontend demo stores are not connected automatically.
+The new entry point is `src/MataHR.Workforce.Host`. The original `MataHR.Api` is retained as archived source, excluded from the supported solution. It is not the ABP workflow host. The companion frontend default entry point now uses the live API; unconnected module prototypes remain source references.
 
 ## Architecture
 
@@ -29,7 +29,7 @@ Password change/reset revokes existing sessions. Authenticator MFA uses a short-
 | Leave | Versioned policies, holidays, allocations, accrual/balances, working-day counting, pending reservations, manager/HR stages, withdrawal and reviewed cancellation |
 | Payroll & Benefits | Compensation and benefits, readiness issues, approved hours/overtime and unpaid leave inputs, immutable snapshots, independent approval, approved export, private verified provider payslips and explicit release |
 
-Presence evidence stays `Unverified`; a digital clock action is not proof of physical presence. No biometric, GPS or network verification is claimed.
+Clock-in evidence can now be `On-site code + GPS checked`: a two-minute hashed site code plus a fresh, accurate location fully inside the configured site boundary. The result checks reported signals at clock-in, not continuous presence or device attestation. Remote work and explicit exceptions remain `Unverified`; an independent reviewer decides completed attendance. No biometric or trusted-network integration is claimed.
 
 Contract signing records verified evidence; it is not an electronic-signature provider integration. HR document verification is independent of upload. Documents are restricted to PDF/PNG/JPEG with content signatures, a 5 MB limit, content hashes and protected SQL storage. Storage is not a public URL. Payslips cannot bypass release via the general document download route. Antivirus scanning, retention schedules, backups and database/storage encryption must be operationally configured before real personnel data is used.
 

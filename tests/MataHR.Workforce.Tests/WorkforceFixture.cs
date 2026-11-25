@@ -30,6 +30,8 @@ public class WorkforceFixture : IAsyncLifetime
         public static void Init() => AppContext.SetSwitch("Switch.Microsoft.Data.SqlClient.UseManagedNetworkingOnWindows", true);
     }
 
+    public int? BrowserPort { get; init; }
+
     public static readonly DateTimeOffset FixedNow = new(2026, 6, 15, 10, 0, 0, TimeSpan.Zero);
     public DateTimeOffset Now => FixedNow;
     public CaptureRecoveryDelivery Recovery { get; } = new();
@@ -58,16 +60,22 @@ public class WorkforceFixture : IAsyncLifetime
         }.ConnectionString;
         Factory = new WebApplicationFactory<WorkforceProgram>().WithWebHostBuilder(b =>
         {
+            var root = new DirectoryInfo(Directory.GetCurrentDirectory());
+            while (root != null && !File.Exists(Path.Combine(root.FullName, "MataHR.sln")))
+                root = root.Parent;
+            if (root == null)
+                throw new InvalidOperationException("Could not locate backend solution root.");
+            b.UseContentRoot(Path.Combine(root.FullName, "src", "MataHR.Workforce.Host"));
             b.UseEnvironment("Testing");
             b.ConfigureServices(services =>
             {
-                services.Replace(ServiceDescriptor.Singleton<TimeProvider>(new FixedClock()));
+                services.Replace(ServiceDescriptor.Singleton<TimeProvider>(BrowserPort.HasValue ? TimeProvider.System : new FixedClock()));
                 Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IAccountRecoveryDelivery) && descriptor.ImplementationType == typeof(MataHR.Workforce.Host.EmailRecoveryDelivery));
                 services.Replace(ServiceDescriptor.Singleton<IAccountRecoveryDelivery>(Recovery));
                 services.AddSingleton<IStartupFilter, TestClientNetwork>();
             });
             b.ConfigureLogging(l => l.AddProvider(Logs));
-            b.ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string, string?> { { "ConnectionStrings:Default", Connection }, { "Bootstrap:Email", "" }, { "Bootstrap:Password", "" } }));
+            b.ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string, string?> { { "ConnectionStrings:Default", Connection }, { "Bootstrap:Email", "" }, { "Bootstrap:Password", "" }, { "Bootstrap:TenantId", TenantA.ToString() } }));
         });
         await using (var master = new SqlConnection(new SqlConnectionStringBuilder(source) { InitialCatalog = "master" }.ConnectionString))
         {
@@ -85,6 +93,8 @@ public class WorkforceFixture : IAsyncLifetime
             await sentinel.ExecuteNonQueryAsync();
         }
 
+        if (BrowserPort.HasValue)
+            Factory.UseKestrel(options => options.ListenLocalhost(BrowserPort.Value, listen => listen.UseHttps()));
         using var client = Factory.CreateClient();
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<WorkforceDbContext>();
@@ -129,7 +139,7 @@ public class WorkforceFixture : IAsyncLifetime
         {
             TenantId = TenantA,
             Name = "Office",
-            Kind = "Office"
+            Kind = "Remote"
         };
         Policy = new AbsencePolicy(TenantA, "Annual", 1, true, true, 30, false, 0, 0, 0, true);
         db.AddRange(Location, Policy);

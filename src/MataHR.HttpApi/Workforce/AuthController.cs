@@ -1,3 +1,5 @@
+using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Data;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +12,7 @@ using MataHR.Workforce.Contracts;
 
 namespace MataHR.HttpApi;
 [ApiController, Route("api/auth")]
-public class AuthController(WorkforceAuthenticationService authentication, AccountSecurityService security, Volo.Abp.Authorization.Permissions.IPermissionChecker permissionChecker) : AbpController
+public class AuthController(WorkforceAuthenticationService authentication, AccountSecurityService security, Volo.Abp.Authorization.Permissions.IPermissionChecker permissionChecker, Volo.Abp.Domain.Repositories.IRepository<PrivacyAcceptance, Guid> privacy, Volo.Abp.Identity.IdentityUserManager identity) : AbpController
 {
     [AllowAnonymous, HttpPost("login"), EnableRateLimiting("login")]
     public async Task<IActionResult> Login(LoginInput input)
@@ -35,6 +37,7 @@ public class AuthController(WorkforceAuthenticationService authentication, Accou
         {
             new(ClaimTypes.NameIdentifier, account.Id.ToString()),
             new(ClaimTypes.Name, account.Email),
+            new(ClaimTypes.Email, account.Email),
             new("tenant", account.TenantId.ToString()),
             new(Volo.Abp.Security.Claims.AbpClaimTypes.TenantId, account.TenantId.ToString()),
             new("role-set", string.Join(',', account.Roles)),
@@ -95,7 +98,8 @@ public class AuthController(WorkforceAuthenticationService authentication, Accou
         foreach (var permission in WorkforcePermissions.All)
             if (await permissionChecker.IsGrantedAsync(permission))
                 permissions.Add(permission);
-        return Ok(new { id = CurrentUser.Id, tenantId = CurrentTenant.Id, employeeId = User.FindFirst("employee")?.Value, roles = CurrentUser.Roles, permissions });
+        var account = await identity.FindByIdAsync(CurrentUser.Id!.Value.ToString());
+        return Ok(new { requiresPasswordChange = account?.GetProperty<bool>("RequirePasswordChange") ?? false, id = CurrentUser.Id, tenantId = CurrentTenant.Id, employeeId = User.FindFirst("employee")?.Value, email = account?.Email ?? CurrentUser.Email, privacyVersion = WorkforceAuthenticationService.PrivacyVersion, privacyAcknowledged = await privacy.AnyAsync(x => x.AccountId == CurrentUser.Id && x.Version == WorkforceAuthenticationService.PrivacyVersion), roles = CurrentUser.Roles, permissions });
     }
 
     [Authorize, HttpPost("privacy")]

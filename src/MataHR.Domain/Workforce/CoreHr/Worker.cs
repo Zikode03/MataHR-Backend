@@ -32,6 +32,13 @@ public class Worker : WorkforceRow
         ContractType = DomainGuard.Text(contractType, "ContractType", 64);
     }
 
+    public static Worker ImportLegacy(Guid id, Guid tenant, string number, string name, string email, DateOnly started, DateOnly? exited, string contractType)
+    {
+        var row = new Worker(tenant, number, name, email, started, exited, contractType);
+        row.Id = id;
+        return row;
+    }
+
     public void Assign(Guid? position, Guid? manager)
     {
         DomainGuard.Against(manager == Id, "ReportingCycle", "Employee cannot report to themselves.");

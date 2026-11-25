@@ -10,7 +10,8 @@ $values=@{
  'ConnectionStrings__Default'="Server=localhost,$port;Database=MataHR;User Id=sa;Password=$($settings.MSSQL_SA_PASSWORD);Encrypt=True;TrustServerCertificate=True";
  'ASPNETCORE_ENVIRONMENT'='Development';'Database__InitializeDevelopmentSchema'=$ApplyDevelopmentMigrations.IsPresent.ToString();
  'Database__UseManagedNetworkingOnWindows'='true';'Bootstrap__Email'=$settings.MATAHR_BOOTSTRAP_EMAIL;
- 'Bootstrap__Password'=$settings.MATAHR_BOOTSTRAP_PASSWORD;'Bootstrap__TenantId'=$settings.MATAHR_TENANT_ID
+ 'Bootstrap__Password'=$settings.MATAHR_BOOTSTRAP_PASSWORD;'Bootstrap__TenantId'=$settings.MATAHR_TENANT_ID;
+ 'LegacyImport__SourceTenantId'=$settings.MATAHR_LEGACY_SOURCE_TENANT_ID;'LegacyImport__TargetTenantId'=$settings.MATAHR_TENANT_ID
 }
 $previous=@{}
 try{

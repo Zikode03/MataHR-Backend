@@ -12,7 +12,7 @@ namespace MataHR.Workforce;
 [RemoteService(false)]
 public class WorkforceAuthenticationService(IRepository<PrivacyAcceptance, Guid> privacy, Volo.Abp.Identity.IdentityUserManager users, ICurrentTenant tenant, IUnitOfWorkManager units) : ITransientDependency
 {
-    public const string PrivacyVersion = "workforce-1.0";
+    public const string PrivacyVersion = "workforce-2.0";
     [UnitOfWork(true)]
     public virtual async Task<AuthAccountDto?> LoginAsync(LoginInput input)
     {

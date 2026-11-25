@@ -227,6 +227,8 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         response = await hr.PostAsJsonAsync("/api/documents", new DocumentInput(f.Alice.Id, "payslip.pdf", "application/pdf", pdf, "Payslip"));
         Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
         var doc = (await response.Content.ReadFromJsonAsync<DocumentDto>())!;
+        var evidence=await hr2.GetFromJsonAsync<DocumentContent>("/api/payroll/documents/"+doc.Id+"/download");Assert.Equal(pdf,evidence!.ContentBase64);
+        Assert.Equal(HttpStatusCode.Forbidden,(await employee.GetAsync("/api/payroll/documents/"+doc.Id+"/download")).StatusCode);
         Assert.True((await hr2.PostAsJsonAsync("/api/documents/" + doc.Id + "/verify", new DocumentVerificationInput("Payslip", "Verified payroll-provider payslip"))).IsSuccessStatusCode);
         response = await hr.PostAsJsonAsync("/api/payroll/runs/" + run.Id + "/payslips", new PayslipInput(f.Alice.Id, doc.Id));
         Assert.True(response.IsSuccessStatusCode, (await response.Content.ReadAsStringAsync()) + f.Logs.Text);

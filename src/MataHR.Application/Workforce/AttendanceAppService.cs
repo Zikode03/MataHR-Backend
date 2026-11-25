@@ -4,10 +4,18 @@ using Volo.Abp.Uow;
 using MataHR.Workforce.Contracts;
 
 namespace MataHR.Workforce;
-public class AttendanceAppService(IRepository<Worker, Guid> workers, IRepository<WorkforceAudit, Guid> audits, IRepository<ClockLocation, Guid> locations, IRepository<WorkSchedule, Guid> schedules, IRepository<WorkSession, Guid> sessions, IRepository<TimeRequest, Guid> requests, IRepository<Absence, Guid> leave, CalendarService calendar) : WorkforceService(workers, audits), IAttendanceAppService
+public class AttendanceAppService(IRepository<Worker, Guid> workers, IRepository<WorkforceAudit, Guid> audits, IRepository<ClockLocation, Guid> locations, IRepository<WorkSchedule, Guid> schedules, IRepository<WorkSession, Guid> sessions, IRepository<TimeRequest, Guid> requests, IRepository<Absence, Guid> leave, CalendarService calendar, IRepository<PresenceChallenge, Guid> challenges) : WorkforceService(workers, audits), IAttendanceAppService
 {
     [Authorize(WorkforcePermissions.AttendanceOwn)]
-    public virtual async Task<List<LocationDto>> GetLocationsAsync() => (await locations.GetListAsync(x => x.Active)).Select(x => new LocationDto(x.Id, x.Name, x.Kind, x.Active)).ToList();
+    public virtual async Task<SessionDto?> GetCurrentAsync()
+    {
+        Allow(Own.HasValue);
+        var row = await sessions.FindAsync(x => x.EmployeeId == Own && x.Status == "Open");
+        return row == null ? null : Dto(row);
+    }
+
+    [Authorize(WorkforcePermissions.AttendanceOwn)]
+    public virtual async Task<List<LocationDto>> GetLocationsAsync() => (await locations.GetListAsync(x => x.Active)).Select(x => new LocationDto(x.Id, x.Name, x.Kind, x.Active, x.Latitude, x.Longitude, x.RadiusMeters)).ToList();
     [Authorize(WorkforcePermissions.AttendanceConfigure)]
     public virtual async Task<LocationDto> CreateLocationAsync(LocationInput input)
     {
@@ -17,6 +25,33 @@ public class AttendanceAppService(IRepository<Worker, Guid> workers, IRepository
         return new(row.Id, row.Name, row.Kind, row.Active);
     }
 
+    [Authorize(WorkforcePermissions.AttendanceConfigure)]
+    public virtual async Task<LocationDto> ConfigureBoundaryAsync(Guid id, SiteBoundaryInput input)
+    {
+        var site = await Get(locations, id);
+        site.ConfigureBoundary(input.Latitude, input.Longitude, input.RadiusMeters);
+        await locations.UpdateAsync(site);
+        await Audit("Attendance.SiteBoundaryChanged", id);
+        return new(site.Id, site.Name, site.Kind, site.Active, site.Latitude, site.Longitude, site.RadiusMeters);
+    }
+
+    [Authorize(WorkforcePermissions.AttendanceConfigure)]
+    public virtual async Task<PresenceCodeDto> GeneratePresenceCodeAsync(Guid id) => await InSerializableTransaction<PresenceCodeDto>(async () =>
+    {
+        var site = await Get(locations, id);
+        Require(site.Active && site.Latitude.HasValue, "Configure an active site's GPS boundary first.");
+        foreach (var old in await challenges.GetListAsync(x => x.LocationId == id && x.ExpiresAt > Now))
+        {
+            old.Expire(Now);
+            await challenges.UpdateAsync(old);
+        }
+
+        var code = System.Security.Cryptography.RandomNumberGenerator.GetInt32(10000000, 100000000).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var expires = Now.AddMinutes(2);
+        await challenges.InsertAsync(new PresenceChallenge(TenantId, id, code, expires));
+        await Audit("Attendance.SiteCodeRotated", id);
+        return new(code, expires);
+    });
     [Authorize(WorkforcePermissions.AttendanceOwn)]
     public virtual async Task<List<ScheduleDto>> GetSchedulesAsync()
     {
@@ -66,7 +101,23 @@ public class AttendanceAppService(IRepository<Worker, Guid> workers, IRepository
             Require(location.Active, "Active location required.");
             Require(!await sessions.AnyAsync(x => x.EmployeeId == employee.Id && x.Status == "Open"), "Open session already exists.");
             Require(!await leave.AnyAsync(x => x.EmployeeId == employee.Id && x.Status == "Approved" && x.Start <= date && x.End >= date), "Approved leave conflicts with clock-in.");
-            var row = await sessions.InsertAsync(new WorkSession(TenantId, employee.Id, location.Id, now));
+            var row = new WorkSession(TenantId, employee.Id, location.Id, now);
+            if (!string.IsNullOrWhiteSpace(input.ExceptionReason))
+                row.RecordException(input.ExceptionReason);
+            else if (location.Kind is "Remote" or "Business travel")
+                row.RecordException("Remote work — independent attendance review required.");
+            else
+            {
+                Require(input.Latitude.HasValue && input.Longitude.HasValue && input.AccuracyMeters.HasValue && input.ObservedAt.HasValue && !string.IsNullOrWhiteSpace(input.SiteCode), "Use a current on-site code and device location, or submit an attendance exception for review.");
+                Require(input.SiteCode!.Length == 8 && input.SiteCode.All(c => c >= '0' && c <= '9'), "Enter the eight-digit on-site code.");
+                var challenge = (await challenges.GetListAsync(x => x.LocationId == location.Id && x.ExpiresAt > now)).OrderByDescending(x => x.ExpiresAt).FirstOrDefault();
+                Require(challenge != null && challenge.Accepts(input.SiteCode!, now), "The on-site code is invalid or expired.");
+                Require(!await sessions.AnyAsync(x => x.EmployeeId == employee.Id && x.PresenceChallengeId == challenge!.Id), "This on-site code has already been used by your account.");
+                var distance = PresenceRules.Validate(location, input.Latitude!.Value, input.Longitude!.Value, input.AccuracyMeters!.Value, input.ObservedAt!.Value, now);
+                row.RecordPresence(challenge!.Id, distance, input.AccuracyMeters.Value);
+            }
+
+            await sessions.InsertAsync(row);
             await Audit("Attendance.ClockIn", row.Id);
             await Flush();
             return Dto(row);
@@ -175,6 +226,6 @@ public class AttendanceAppService(IRepository<Worker, Guid> workers, IRepository
         });
     }
 
-    static SessionDto Dto(WorkSession x) => new(x.Id, x.EmployeeId, x.LocationId, x.Date, x.Start, x.End, x.Status, x.Evidence, x.ConcurrencyStamp);
+    static SessionDto Dto(WorkSession x) => new(x.Id, x.EmployeeId, x.LocationId, x.Date, x.Start, x.End, x.Status, x.Evidence, x.ConcurrencyStamp, x.ExceptionReason, x.DistanceMeters, x.AccuracyMeters);
     static TimeRequestDto Dto(TimeRequest x) => new(x.Id, x.EmployeeId, x.Kind, x.SessionId, x.Date, x.Start, x.End, x.Reason, x.Status, x.ConcurrencyStamp);
 }

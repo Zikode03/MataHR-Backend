@@ -87,6 +87,22 @@ public class AccountsAppService(IRepository<Worker, Guid> workers, IRepository<W
         await Audit("Role.PermissionChanged", TenantId, input.Role + ":" + input.Permission + ":" + input.Granted);
     }
 
+    [Authorize(WorkforcePermissions.Accounts)]
+    public virtual async Task<List<EmployeeLinkDto>> GetEmployeeLinksAsync() => await Queries.ToListAsync((await workers.GetQueryableAsync()).OrderBy(x => x.Number).Select(x => new EmployeeLinkDto(x.Id, x.Number, x.Name)));
+    [Authorize(WorkforcePermissions.Accounts)]
+    public virtual async Task<List<RoleGrantDto>> GetRoleGrantsAsync(string role)
+    {
+        Require(new[] { "Admin", "HR", "Manager", "Employee" }.Contains(role), "Unknown role.");
+        var result = new List<RoleGrantDto>();
+        foreach (var permission in WorkforcePermissions.All)
+        {
+            var grant = await grants.GetAsync(permission, "R", role);
+            result.Add(new(permission, grant.IsGranted));
+        }
+
+        return result;
+    }
+
     async Task<AccountDto> Dto(Volo.Abp.Identity.IdentityUser x) => new(x.Id, x.Email, (await users.GetRolesAsync(x)).ToArray(), x.GetProperty<Guid?>("EmployeeId"), x.IsActive, x.ConcurrencyStamp);
     async Task<List<AccountDto>> Dtos(List<Volo.Abp.Identity.IdentityUser> rows)
     {

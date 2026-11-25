@@ -8,6 +8,10 @@ namespace MataHR.HttpApi;
 [Authorize, Route("api/admin"), ApiController]
 public class AccountsController(IAccountsAppService service) : AbpController
 {
+    [HttpGet("employee-links")]
+    public Task<List<EmployeeLinkDto>> EmployeeLinks() => service.GetEmployeeLinksAsync();
+    [HttpGet("role-permissions")]
+    public Task<List<RoleGrantDto>> Grants(string role) => service.GetRoleGrantsAsync(role);
     [HttpGet("accounts")]
     public Task<Page<AccountDto>> Accounts([FromQuery] PageQuery input) => service.GetListAsync(input);
     [HttpPost("accounts")]

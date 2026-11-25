@@ -5,14 +5,29 @@ using Volo.Abp.Uow;
 using MataHR.Workforce.Contracts;
 
 namespace MataHR.Workforce;
-public class OrganisationAppService(IRepository<Worker, Guid> workers, IRepository<WorkforceAudit, Guid> audits, IRepository<Office, Guid> offices, IRepository<Team, Guid> teams, IRepository<Job, Guid> jobs, IRepository<ChartCard, Guid> cards, IRepository<EmploymentChange, Guid> history, ReportingLineManager reporting) : WorkforceService(workers, audits), IOrganisationAppService
+public class OrganisationAppService(IRepository<Worker, Guid> workers, IRepository<WorkforceAudit, Guid> audits, IRepository<Office, Guid> offices, IRepository<Team, Guid> teams, IRepository<Job, Guid> jobs, IRepository<ChartCard, Guid> cards, IRepository<EmploymentChange, Guid> history, ReportingLineManager reporting, IRepository<OrganisationCanvas, Guid> canvases) : WorkforceService(workers, audits), IOrganisationAppService
 {
     [Authorize(WorkforcePermissions.OrganisationRead)]
     public virtual async Task<StructureDto> GetAsync()
     {
         Allow(Hr || Own != null);
-        var ids = await Queries.ToListAsync((await Visible()).Select(x => x.Id));
-        return new((await offices.GetListAsync()).Select(x => new BranchDto(x.Id, x.Name)).ToList(), (await teams.GetListAsync()).Select(x => new DepartmentDto(x.Id, x.BranchId, x.Name)).ToList(), (await jobs.GetListAsync()).Select(x => new PositionDto(x.Id, x.DepartmentId, x.Name)).ToList(), (await workers.GetListAsync(x => ids.Contains(x.Id))).Select(Dto).ToList(), (await cards.GetListAsync(x => ids.Contains(x.EmployeeId))).Select(x => new LayoutDto(x.EmployeeId, x.X, x.Y, x.Connector)).ToList());
+        var directory = User.IsInRole("Employee") && !User.IsInRole("Manager") && !Hr ? await workers.GetQueryableAsync() : await Visible();
+        if (!Hr)
+            directory = directory.Where(x => x.Started <= Today && (x.Exited == null || x.Exited > Today));
+        var ids = await Queries.ToListAsync(directory.Select(x => x.Id));
+        var canvas = await canvases.FindAsync(x => x.TenantId == TenantId);
+        return new((await offices.GetListAsync()).Select(x => new BranchDto(x.Id, x.Name)).ToList(), (await teams.GetListAsync()).Select(x => new DepartmentDto(x.Id, x.BranchId, x.Name)).ToList(), (await jobs.GetListAsync()).Select(x => new PositionDto(x.Id, x.DepartmentId, x.Name)).ToList(), (await workers.GetListAsync(x => ids.Contains(x.Id))).Select(x => new OrganisationPersonDto(x.Id, x.Number, x.Name, x.PositionId, x.ManagerId, x.IsActive(Today), x.ConcurrencyStamp)).ToList(), (await cards.GetListAsync(x => ids.Contains(x.EmployeeId))).Select(x => new LayoutDto(x.EmployeeId, x.X, x.Y, x.Connector)).ToList(), canvas == null ? null : new ChartPointDto(canvas.X, canvas.Y));
+    }
+
+    [Authorize(WorkforcePermissions.OrganisationWrite)]
+    public virtual async Task SaveCanvasAsync(ChartPointDto input)
+    {
+        Require(double.IsFinite(input.X) && double.IsFinite(input.Y) && Math.Abs(input.X) <= 100000 && Math.Abs(input.Y) <= 100000, "Invalid canvas coordinates.");
+        var row = await canvases.FindAsync(x => x.TenantId == TenantId) ?? await canvases.InsertAsync(New(new OrganisationCanvas()));
+        row.X = input.X;
+        row.Y = input.Y;
+        await canvases.UpdateAsync(row);
+        await Audit("Organisation.CanvasSaved", row.Id);
     }
 
     [Authorize(WorkforcePermissions.OrganisationWrite)]

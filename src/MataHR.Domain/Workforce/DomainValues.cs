@@ -1,7 +1,7 @@
 using Volo.Abp;
 
 namespace MataHR.Workforce;
-public class WorkforceRuleException(string code, string message) : BusinessException("MataHR:" + code, message)
+public class WorkforceRuleException(string code, string message) : UserFriendlyException(message, "MataHR:" + code)
 {
 }
 

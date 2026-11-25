@@ -3,6 +3,8 @@ using Volo.Abp.Application.Services;
 namespace MataHR.Workforce.Contracts;
 public interface IAccountsAppService : IApplicationService
 {
+    Task<List<EmployeeLinkDto>> GetEmployeeLinksAsync();
+    Task<List<RoleGrantDto>> GetRoleGrantsAsync(string role);
     Task SetRolePermissionAsync(RolePermissionInput input);
     Task<AccountDto> UpdateAsync(Guid id, AccountUpdateInput input);
     Task<Page<AccountDto>> GetListAsync(PageQuery input);
@@ -13,6 +15,9 @@ public interface IAccountsAppService : IApplicationService
 
 public interface IAttendanceAppService : IApplicationService
 {
+    Task<LocationDto> ConfigureBoundaryAsync(Guid id, SiteBoundaryInput input);
+    Task<PresenceCodeDto> GeneratePresenceCodeAsync(Guid id);
+    Task<SessionDto?> GetCurrentAsync();
     Task<List<LocationDto>> GetLocationsAsync();
     Task<LocationDto> CreateLocationAsync(LocationInput input);
     Task<List<ScheduleDto>> GetSchedulesAsync();
@@ -68,6 +73,7 @@ public interface ILeaveAppService : IApplicationService
 
 public interface IOrganisationAppService : IApplicationService
 {
+    Task SaveCanvasAsync(ChartPointDto input);
     Task<StructureDto> GetAsync();
     Task<BranchDto> CreateBranchAsync(BranchInput input);
     Task<DepartmentDto> CreateDepartmentAsync(DepartmentInput input);
@@ -78,6 +84,8 @@ public interface IOrganisationAppService : IApplicationService
 
 public interface IPayrollAppService : IApplicationService
 {
+    Task<DocumentContent> DownloadProviderDocumentAsync(Guid id);
+    Task<List<DocumentDto>> GetProviderDocumentsAsync();
     Task<List<CompensationDto>> GetSalariesAsync();
     Task SetSalaryAsync(CompensationInput input);
     Task<List<BenefitDto>> GetBenefitsAsync();
