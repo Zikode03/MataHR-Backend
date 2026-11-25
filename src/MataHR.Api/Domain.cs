@@ -32,6 +32,11 @@ public sealed class Db(DbContextOptions<Db> options):DbContext(options) {
  public DbSet<LeavePolicy> Policies=>Set<LeavePolicy>(); public DbSet<Entitlement> Entitlements=>Set<Entitlement>(); public DbSet<LeaveRequest> Leave=>Set<LeaveRequest>();
  public DbSet<Salary> Salaries=>Set<Salary>(); public DbSet<Benefit> Benefits=>Set<Benefit>(); public DbSet<PayrollRun> Runs=>Set<PayrollRun>(); public DbSet<PrivacyAck> PrivacyAcks=>Set<PrivacyAck>(); public DbSet<Audit> Audits=>Set<Audit>(); public DbSet<Integration> Integrations=>Set<Integration>();
  protected override void OnModelCreating(ModelBuilder b){
+ b.Entity<Account>().Property(x=>x.Email).HasMaxLength(254); b.Entity<Employee>().Property(x=>x.Number).HasMaxLength(64);
+ b.Entity<Branch>().Property(x=>x.Name).HasMaxLength(160); b.Entity<Department>().Property(x=>x.Name).HasMaxLength(160); b.Entity<Position>().Property(x=>x.Name).HasMaxLength(160);
+ b.Entity<Session>().Property(x=>x.Status).HasMaxLength(32); b.Entity<PayrollRun>().Property(x=>x.Period).HasMaxLength(7); b.Entity<Integration>().Property(x=>x.Kind).HasMaxLength(32);
+ foreach(var entity in b.Model.GetEntityTypes())foreach(var prop in entity.GetProperties().Where(p=>p.ClrType==typeof(decimal))) {prop.SetPrecision(18);prop.SetScale(4);}
+
  b.Entity<Branch>().HasIndex(x=>new{x.TenantId,x.Name}).IsUnique(); b.Entity<Position>().HasIndex(x=>new{x.TenantId,x.DepartmentId,x.Name}).IsUnique(); b.Entity<Assignment>().HasIndex(x=>new{x.TenantId,x.EmployeeId}).IsUnique();
  b.Entity<Employee>().HasAlternateKey(x=>new{x.TenantId,x.Id}); b.Entity<Branch>().HasAlternateKey(x=>new{x.TenantId,x.Id}); b.Entity<Department>().HasAlternateKey(x=>new{x.TenantId,x.Id}); b.Entity<Position>().HasAlternateKey(x=>new{x.TenantId,x.Id});
  b.Entity<Department>().HasOne<Branch>().WithMany().HasForeignKey(x=>new{x.TenantId,x.BranchId}).HasPrincipalKey(x=>new{x.TenantId,x.Id}).OnDelete(DeleteBehavior.Restrict);
@@ -41,7 +46,7 @@ public sealed class Db(DbContextOptions<Db> options):DbContext(options) {
  b.Entity<Assignment>().HasOne<Employee>().WithMany().HasForeignKey(x=>new{x.TenantId,x.ManagerId}).HasPrincipalKey(x=>new{x.TenantId,x.Id}).OnDelete(DeleteBehavior.Restrict);
  b.Entity<Account>().HasIndex(x=>new{x.TenantId,x.Email}).IsUnique(); b.Entity<Employee>().HasIndex(x=>new{x.TenantId,x.Number}).IsUnique();
  b.Entity<Department>().HasIndex(x=>new{x.TenantId,x.Name}).IsUnique(); b.Entity<Schedule>().HasIndex(x=>new{x.TenantId,x.EmployeeId}).IsUnique(); b.Entity<Holiday>().HasIndex(x=>new{x.TenantId,x.Date}).IsUnique(); b.Entity<Entitlement>().HasIndex(x=>new{x.TenantId,x.EmployeeId,x.PolicyId,x.Year}).IsUnique();
- b.Entity<Session>().HasIndex(x=>new{x.TenantId,x.EmployeeId}).IsUnique().HasFilter("Status = 'Open'");
+ b.Entity<Session>().HasIndex(x=>new{x.TenantId,x.EmployeeId}).IsUnique().HasFilter("[Status] = 'Open'");
  b.Entity<Salary>().HasIndex(x=>new{x.TenantId,x.EmployeeId}).IsUnique(); b.Entity<PayrollRun>().HasIndex(x=>new{x.TenantId,x.Period}).IsUnique(); b.Entity<Integration>().HasIndex(x=>new{x.TenantId,x.Kind}).IsUnique();
  }
 }

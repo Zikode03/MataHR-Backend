@@ -17,7 +17,7 @@ Scope: six Daily Workspace modules and four role workspaces. Existing API is ret
 | administration/model | self-service, employee requests, audit | partial API; requests pending |
 
 ## Architecture migration
-ABP 10.7.1 modules for domain shared, domain, application contracts, application, persistence and HTTP API are registered in the existing ASP.NET Core host. Organisation assignment is the first layered slice; remaining legacy endpoints still use direct EF access. ABP identity, permission management, multi-tenant data filters and audited repositories are not yet integrated. Custom tenant checks remain authoritative. No ABP commercial package required. Do not run on an existing SQLite file from the old schema; use a disposable development database until migrations exist.
+ABP 10.7.1 modules for domain shared, domain, application contracts, application, persistence and HTTP API are registered in the existing ASP.NET Core host. Organisation assignment is the first layered slice; remaining legacy endpoints still use direct EF access. ABP identity, permission management, multi-tenant data filters and audited repositories are not yet integrated. Custom tenant checks remain authoritative. No ABP commercial package required. Do not run on an existing SQL Server file from the old schema; use a disposable development database until migrations exist.
 
 ## Acceptance gates
 Build and test every commit. Add tenant-boundary and role-scope HTTP tests, migration tests, contract lifecycle and document tests, concurrent leave and clock tests, payroll reconciliation, API schema and frontend integration tests. Never expose live HR data before production controls and review.

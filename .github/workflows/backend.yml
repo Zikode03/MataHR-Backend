@@ -3,6 +3,20 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: "CiOnly!MataHR_2026_Test"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'CiOnly!MataHR_2026_Test' -C -Q 'SELECT 1' -b"
+          --health-interval 10s --health-timeout 5s --health-retries 20 --health-start-period 30s
+    env:
+      MATAHR_TEST_SQL: "Server=127.0.0.1,1433;Database=master;User Id=sa;Password=CiOnly!MataHR_2026_Test;Encrypt=True;TrustServerCertificate=True"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

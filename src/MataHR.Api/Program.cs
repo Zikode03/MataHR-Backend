@@ -7,7 +7,9 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 var b=WebApplication.CreateBuilder(args);
-b.Services.AddDbContext<Db>(o=>o.UseSqlite(b.Configuration.GetConnectionString("Default")??"Data Source=matahr.db"));
+var connection=b.Configuration.GetConnectionString("Default");
+if(string.IsNullOrWhiteSpace(connection))throw new InvalidOperationException("Configure ConnectionStrings__Default for Microsoft SQL Server.");
+b.Services.AddDbContext<Db>(o=>o.UseSqlServer(connection));
 b.Services.AddScoped<IPasswordHasher<Account>,PasswordHasher<Account>>();
 b.Services.AddOpenApi(); b.Services.AddProblemDetails();
 b.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(o=>{
@@ -31,7 +33,8 @@ app.MapGet("/health",()=>Results.Ok(new{status="ok"}));
 using(var scope=app.Services.CreateScope()){
  var db=scope.ServiceProvider.GetRequiredService<Db>();
  if(!app.Environment.IsDevelopment()&&!app.Environment.IsEnvironment("Testing"))throw new InvalidOperationException("Production deployment is disabled until reviewed migrations and operational controls are configured.");
- await db.Database.EnsureCreatedAsync();
+ if(b.Configuration.GetValue<bool>("Database:InitializeDevelopmentSchema")||app.Environment.IsEnvironment("Testing"))await db.Database.EnsureCreatedAsync();
+ else if(!await db.Database.CanConnectAsync())throw new InvalidOperationException("Database unavailable. Configure SQL Server and initialize the development schema explicitly.");
  var email=b.Configuration["Bootstrap:Email"];var password=b.Configuration["Bootstrap:Password"];
  if(!string.IsNullOrWhiteSpace(email)&&!string.IsNullOrWhiteSpace(password)){
  if(password.Length<14)throw new InvalidOperationException("Bootstrap password must be at least 14 characters.");
