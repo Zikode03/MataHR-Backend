@@ -8,11 +8,11 @@ Install .NET 10 SDK. Copy .env.example to .env and set a strong unique developme
 docker compose up -d
 docker compose ps
 ```
-In SSMS connect to localhost,1433 using SQL Server Authentication, login sa and the password in .env. Enable Trust server certificate for local development only. If port 1433 is occupied, set MSSQL_PORT in .env and use that port in SSMS and the connection string.
+In SSMS connect to localhost,14336 using SQL Server Authentication, login sa and the password in .env. Enable Trust server certificate for local development only. If port 14336 is occupied, set MSSQL_PORT in .env and use that port in SSMS and the connection string.
 In PowerShell, set the connection string without committing secrets:
 ```powershell
 $secret = Read-Host "SQL Server development password" -MaskInput
-$env:ConnectionStrings__Default = "Server=localhost,1433;Database=MataHR;User Id=sa;Password=$secret;Encrypt=True;TrustServerCertificate=True"
+$env:ConnectionStrings__Default = "Server=localhost,14336;Database=MataHR;User Id=sa;Password=$secret;Encrypt=True;TrustServerCertificate=True"
 $env:ASPNETCORE_ENVIRONMENT = "Development"
 $env:Database__InitializeDevelopmentSchema = "true"
 $env:Bootstrap__Email = Read-Host "Initial administrator email"
