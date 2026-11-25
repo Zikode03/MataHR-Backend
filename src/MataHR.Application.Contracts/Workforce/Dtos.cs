@@ -1,24 +1,22 @@
 using System.ComponentModel.DataAnnotations;
-namespace MataHR.Workforce.Contracts;
 
+namespace MataHR.Workforce.Contracts;
 public class PageQuery
 {
     [Range(0, int.MaxValue)]
-    public int SkipCount
-    {
-        get; set;
-    }
-    [Range(1, 200)] public int MaxResultCount { get; set; } = 50;
+    public int SkipCount { get; set; }
+
+    [Range(1, 200)]
+    public int MaxResultCount { get; set; } = 50;
+
     [StringLength(100)]
-    public string? Search
-    {
-        get; set;
-    }
+    public string? Search { get; set; }
 }
+
 public record Page<T>(long TotalCount, IReadOnlyList<T> Items);
 public record EmployeeDto(Guid Id, string Number, string Name, string Email, DateOnly Started, DateOnly? Exited, string ContractType, Guid? ManagerId, Guid? PositionId, string ConcurrencyStamp);
 public record EmployeeInput(string Number, string Name, string Email, DateOnly Started, DateOnly? Exited, string ContractType, Guid? ManagerId, Guid? PositionId, string? ConcurrencyStamp = null);
-public record EmployeeHistoryDto(Guid Id, DateOnly EffectiveDate, string Description);
+public record EmployeeHistoryDto(Guid Id, DateOnly EffectiveDate, string Description, string BeforeStateJson = "", string AfterStateJson = "");
 public record BranchDto(Guid Id, string Name);
 public record DepartmentDto(Guid Id, Guid BranchId, string Name);
 public record PositionDto(Guid Id, Guid DepartmentId, string Name);
@@ -50,11 +48,11 @@ public record AllocationInput(Guid EmployeeId, Guid PolicyId, int Year, decimal 
 public record BalanceDto(Guid PolicyId, string Name, bool Configured, bool Unlimited, decimal? Available);
 public record LeaveInput(Guid PolicyId, DateOnly Start, DateOnly End, string Reason, Guid? EvidenceId = null);
 public record LeaveDto(Guid Id, Guid EmployeeId, Guid PolicyId, DateOnly Start, DateOnly End, int Days, bool Paid, string Status, string Stage, string Reason, string ConcurrencyStamp);
-public record CompensationInput(Guid EmployeeId, decimal Basic, decimal Allowance, decimal Deduction, decimal HourlyRate, decimal OvertimeMultiplier);
-public record CompensationDto(Guid EmployeeId, decimal Basic, decimal Allowance, decimal Deduction, decimal HourlyRate, decimal OvertimeMultiplier);
-public record BenefitInput(Guid EmployeeId, string Name, decimal Employer, decimal EmployeeCost);
-public record BenefitDto(Guid Id, Guid EmployeeId, string Name, decimal Employer, decimal EmployeeCost, bool Active);
-public record PayrollRow(Guid EmployeeId, string Number, decimal Basic, decimal Allowance, decimal Deduction, decimal EmployerBenefits, decimal EmployeeBenefits, decimal ApprovedHours, decimal OvertimeHours, decimal OvertimePay, int UnpaidDays, int Pending);
+public record CompensationInput(Guid EmployeeId, decimal Basic, decimal Allowance, decimal Deduction, decimal HourlyRate, decimal OvertimeMultiplier, DateOnly EffectiveFrom = default);
+public record CompensationDto(Guid EmployeeId, decimal Basic, decimal Allowance, decimal Deduction, decimal HourlyRate, decimal OvertimeMultiplier, DateOnly EffectiveFrom = default);
+public record BenefitInput(Guid EmployeeId, string Name, decimal Employer, decimal EmployeeCost, DateOnly EffectiveFrom = default, DateOnly? EffectiveTo = null);
+public record BenefitDto(Guid Id, Guid EmployeeId, string Name, decimal Employer, decimal EmployeeCost, bool Active, DateOnly EffectiveFrom = default, DateOnly? EffectiveTo = null);
+public record PayrollRow(Guid EmployeeId, string Number, decimal Basic, decimal Allowance, decimal Deduction, decimal EmployerBenefits, decimal EmployeeBenefits, decimal ApprovedHours, decimal OvertimeHours, decimal OvertimePay, int UnpaidDays, int Pending, string SourceFingerprint = "");
 public record PayrollReadiness(string Period, bool Ready, IReadOnlyList<string> Issues, IReadOnlyList<PayrollRow> Rows);
 public record RunDto(Guid Id, string Period, string Status, string Hash, Guid? PreparedBy, Guid? ReviewedBy, Guid? ApprovedBy, string ConcurrencyStamp);
 public record RunInput(string Period);
@@ -64,5 +62,6 @@ public record PayslipDto(Guid Id, Guid EmployeeId, Guid RunId, Guid DocumentId, 
 public record DashboardDto(DateOnly From, DateOnly To, int Headcount, int NewJoiners, int RecordedToday, int OnLeaveToday, int PendingLeave, int PendingAttendance, int PendingTimeRequests, decimal? PreparedPayrollInputs);
 public record AccountInput(string Email, string Password, string[] Roles, Guid? EmployeeId);
 public record AccountDto(Guid Id, string Email, string[] Roles, Guid? EmployeeId, bool Active, string ConcurrencyStamp);
-
 public record AccountUpdateInput(string[] Roles, Guid? EmployeeId, bool Active, string ConcurrencyStamp);
+public record DocumentVerificationInput(string Purpose = "General", string Attestation = "", DateOnly? SignedOn = null);
+public record RolePermissionInput(string Role, string Permission, bool Granted);

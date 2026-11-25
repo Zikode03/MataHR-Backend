@@ -1,8 +1,8 @@
 # MataHR — ABP Daily Workspace backend
 
-ASP.NET Core 10 and ABP Framework 10.7.1 with SQL Server, typed application services, ABP repositories, tenant filters, permissions, units of work and audited aggregates.
+ASP.NET Core 10 and ABP Framework 10.7.1 with SQL Server, typed application services, domain workflows, ABP Identity, persisted permission grants, Audit Logging, repositories, tenant filters and transactional units of work.
 
-The new API host is **src/MataHR.Workforce.Host**. It implements Dashboard, Employees, Organisation, Digital Register, Leave Management and Payroll & Benefits. The original `MataHR.Api` project remains a legacy reference. It has not been replaced as the active local API.
+The new API host is **src/MataHR.Workforce.Host**. It implements Dashboard, Employees, Organisation, Digital Register, Leave Management and Payroll & Benefits. The original `MataHR.Api` source is an archived reference, excluded from the supported solution. Both startup scripts target Workforce.Host. This code change does not replace an already running local process.
 
 See the [backend guide](docs/daily-workspace-backend.md) for architecture, workflows, endpoint conventions and remaining production work.
 
@@ -49,3 +49,9 @@ CI builds `MataHR.Workforce.Host` and runs `MataHR.Workforce.Tests` against an i
 All writes require `X-MataHR-Request: 1`. Login uses assigned accounts at `/api/auth/login`; accept the current notice at `/api/auth/privacy` before accessing workforce data. Roles are Admin, HR, Manager and Employee. Admin has no automatic personnel or payroll access; managers are scoped to direct reports; employees access their own records.
 
 The frontend remains a separate demo until its stores and DTOs are connected to this API. Payroll implements reconciled inputs, benefits, overtime, approval, export and provider payslip release. Statutory tax calculations, payment instructions and live payroll-provider integrations are not implemented. Production startup remains disabled pending operational and security work described in the guide.
+
+## Security and data history
+
+Accounts use native ABP Identity users and roles, lockout, security stamps, password reset tokens and authenticator MFA with one-use recovery codes. Password reset delivery requires `Auth:RecoveryEnabled`, an HTTPS `Auth:PasswordResetUrl`, and configured ABP email delivery. No reset mail is sent by default. MFA enrollment and recovery endpoints are documented in the backend guide.
+
+Compensation revisions and benefit enrollments are effective-dated on month boundaries. Payroll freezes source fingerprints and rejects changed sources before approval. Undated legacy pay records require reconciliation. Leave freezes its working dates; older leave without a matching calendar fails closed until reconciled. Migration preserves legacy account tables but does not silently import credentials into Identity.

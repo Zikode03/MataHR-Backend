@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Uow;
 using MataHR.Workforce.Contracts;
-namespace MataHR.Workforce;
 
-public class OrganisationAppService(IRepository<Worker, Guid> workers, IRepository<WorkforceAudit, Guid> audits, IRepository<Office, Guid> offices, IRepository<Team, Guid> teams, IRepository<Job, Guid> jobs, IRepository<ChartCard, Guid> cards, IRepository<EmploymentChange, Guid> history) : WorkforceService(workers, audits), IOrganisationAppService
+namespace MataHR.Workforce;
+public class OrganisationAppService(IRepository<Worker, Guid> workers, IRepository<WorkforceAudit, Guid> audits, IRepository<Office, Guid> offices, IRepository<Team, Guid> teams, IRepository<Job, Guid> jobs, IRepository<ChartCard, Guid> cards, IRepository<EmploymentChange, Guid> history, ReportingLineManager reporting) : WorkforceService(workers, audits), IOrganisationAppService
 {
     [Authorize(WorkforcePermissions.OrganisationRead)]
     public virtual async Task<StructureDto> GetAsync()
@@ -14,6 +14,7 @@ public class OrganisationAppService(IRepository<Worker, Guid> workers, IReposito
         var ids = await Queries.ToListAsync((await Visible()).Select(x => x.Id));
         return new((await offices.GetListAsync()).Select(x => new BranchDto(x.Id, x.Name)).ToList(), (await teams.GetListAsync()).Select(x => new DepartmentDto(x.Id, x.BranchId, x.Name)).ToList(), (await jobs.GetListAsync()).Select(x => new PositionDto(x.Id, x.DepartmentId, x.Name)).ToList(), (await workers.GetListAsync(x => ids.Contains(x.Id))).Select(Dto).ToList(), (await cards.GetListAsync(x => ids.Contains(x.EmployeeId))).Select(x => new LayoutDto(x.EmployeeId, x.X, x.Y, x.Connector)).ToList());
     }
+
     [Authorize(WorkforcePermissions.OrganisationWrite)]
     public virtual async Task<BranchDto> CreateBranchAsync(BranchInput input)
     {
@@ -22,6 +23,7 @@ public class OrganisationAppService(IRepository<Worker, Guid> workers, IReposito
         await Audit("Branch.Created", row.Id);
         return new(row.Id, row.Name);
     }
+
     [Authorize(WorkforcePermissions.OrganisationWrite)]
     public virtual async Task<DepartmentDto> CreateDepartmentAsync(DepartmentInput input)
     {
@@ -31,6 +33,7 @@ public class OrganisationAppService(IRepository<Worker, Guid> workers, IReposito
         await Audit("Department.Created", row.Id);
         return new(row.Id, row.BranchId, row.Name);
     }
+
     [Authorize(WorkforcePermissions.OrganisationWrite)]
     public virtual async Task<PositionDto> CreatePositionAsync(PositionInput input)
     {
@@ -40,32 +43,24 @@ public class OrganisationAppService(IRepository<Worker, Guid> workers, IReposito
         await Audit("Position.Created", row.Id);
         return new(row.Id, row.DepartmentId, row.Name);
     }
-    [Authorize(WorkforcePermissions.OrganisationWrite), UnitOfWork(true)]
+
+    [Authorize(WorkforcePermissions.OrganisationWrite), SerializableCommand]
     public virtual async Task<EmployeeDto> AssignAsync(AssignmentInput input)
     {
-        var w = await Worker(input.EmployeeId);
-        Stamp(w, input.ConcurrencyStamp);
-        if (input.PositionId.HasValue)
-            await Get(jobs, input.PositionId.Value);
-        if (input.ManagerId.HasValue)
+        return await InSerializableTransaction<EmployeeDto>(async () =>
         {
-            var manager = await Worker(input.ManagerId.Value);
-            Require(Active(manager, Today), "Current manager required.");
-        }
-        var links = (await Queries.ToListAsync((await workers.GetQueryableAsync()).Where(x => x.TenantId == TenantId))).ToDictionary(x => x.Id, x => x.ManagerId);
-        try
-        {
-            MataHR.Domain.EmploymentRules.ValidateReporting(w.Id, input.ManagerId, links);
-        }
-        catch (MataHR.Foundation.DomainRuleException e) { throw new Volo.Abp.UserFriendlyException(e.Message); }
-        w.ManagerId = input.ManagerId;
-        w.PositionId = input.PositionId;
-        await workers.UpdateAsync(w);
-        await history.InsertAsync(New(new EmploymentChange { EmployeeId = w.Id, EffectiveDate = Today, Description = "Organisation assignment changed" }));
-        await Audit("Organisation.Assigned", w.Id);
-        await Flush();
-        return Dto(w);
+            var w = await Worker(input.EmployeeId);
+            Stamp(w, input.ConcurrencyStamp);
+            var before = w.Snapshot();
+            await reporting.AssignAsync(w, input.PositionId, input.ManagerId, Today);
+            await workers.UpdateAsync(w);
+            await history.InsertAsync(new EmploymentChange(TenantId, w.Id, Today, "Organisation assignment changed", before, w.Snapshot()));
+            await Audit("Organisation.Assigned", w.Id);
+            await Flush();
+            return Dto(w);
+        });
     }
+
     [Authorize(WorkforcePermissions.OrganisationWrite)]
     public virtual async Task SaveLayoutAsync(List<LayoutDto> input)
     {
@@ -83,7 +78,11 @@ public class OrganisationAppService(IRepository<Worker, Guid> workers, IReposito
                     Require(point.TryGetProperty("x", out var x) && point.TryGetProperty("y", out var y) && x.TryGetDouble(out var px) && y.TryGetDouble(out var py) && double.IsFinite(px) && double.IsFinite(py) && Math.Abs(px) <= 100000 && Math.Abs(py) <= 100000, "Invalid connector point.");
                 }
             }
-            catch (JsonException) { throw new Volo.Abp.UserFriendlyException("Invalid connector JSON."); }
+            catch (JsonException)
+            {
+                throw new Volo.Abp.UserFriendlyException("Invalid connector JSON.");
+            }
+
             var row = await cards.FindAsync(x => x.EmployeeId == i.EmployeeId);
             if (row == null)
                 row = await cards.InsertAsync(New(new ChartCard { EmployeeId = i.EmployeeId }));
@@ -92,6 +91,7 @@ public class OrganisationAppService(IRepository<Worker, Guid> workers, IReposito
             row.Connector = i.Connector;
             await cards.UpdateAsync(row);
         }
+
         await Audit("Organisation.LayoutSaved", TenantId);
     }
 }

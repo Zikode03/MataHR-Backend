@@ -5,8 +5,8 @@ using Xunit;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-namespace MataHR.Workforce.Tests;
 
+namespace MataHR.Workforce.Tests;
 public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
 {
     [Fact]
@@ -14,24 +14,20 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
     {
         using var c = f.Factory.CreateClient();
         Assert.Equal(HttpStatusCode.Unauthorized, (await c.GetAsync("/api/employees")).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsJsonAsync("/api/auth/login", new
-        {
-        })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsJsonAsync("/api/auth/login", new { })).StatusCode);
     }
+
     [Fact]
     public async Task LoginPrivacyAndLogoutAreDatabaseBacked()
     {
         using var c = await f.Client("privacy", false);
         Assert.Equal(HttpStatusCode.Forbidden, (await c.GetAsync("/api/employees")).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await c.PostAsJsonAsync("/api/auth/privacy", new
-        {
-        })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await c.PostAsJsonAsync("/api/auth/privacy", new { })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/api/employees")).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await c.PostAsJsonAsync("/api/auth/logout", new
-        {
-        })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await c.PostAsJsonAsync("/api/auth/logout", new { })).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await c.GetAsync("/api/auth/me")).StatusCode);
     }
+
     [Fact]
     public async Task RolesAndTenantBoundariesAreEnforced()
     {
@@ -56,6 +52,7 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/payroll/salaries")).StatusCode);
         Assert.Empty((await admin.GetFromJsonAsync<Page<EmployeeDto>>("/api/employees"))!.Items);
     }
+
     [Fact]
     public async Task StaleUpdatesAndReportingCyclesAreRejected()
     {
@@ -68,6 +65,7 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         var cycle = await hr.PutAsJsonAsync("/api/organisation/assignments", new AssignmentInput(manager.Id, null, alice.Id, manager.ConcurrencyStamp));
         Assert.False(cycle.IsSuccessStatusCode);
     }
+
     [Fact]
     public async Task DocumentsArePrivateAndContractsRequireIndependentEvidence()
     {
@@ -79,12 +77,8 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         Assert.True(upload.IsSuccessStatusCode, (await upload.Content.ReadAsStringAsync()) + "\n" + f.Logs.Text);
         var doc = (await upload.Content.ReadFromJsonAsync<DocumentDto>())!;
         Assert.Equal(HttpStatusCode.Forbidden, (await employee.GetAsync("/api/documents/" + doc.Id + "/download")).StatusCode);
-        Assert.False((await hr.PostAsJsonAsync("/api/documents/" + doc.Id + "/verify", new
-        {
-        })).IsSuccessStatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await hr2.PostAsJsonAsync("/api/documents/" + doc.Id + "/verify", new
-        {
-        })).StatusCode);
+        Assert.False((await hr.PostAsJsonAsync("/api/documents/" + doc.Id + "/verify", new DocumentVerificationInput("UnsignedContract", "Independent unsigned document check"))).IsSuccessStatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await hr2.PostAsJsonAsync("/api/documents/" + doc.Id + "/verify", new DocumentVerificationInput("UnsignedContract", "Independent unsigned document check"))).StatusCode);
         var created = await hr.PostAsJsonAsync("/api/contracts", new ContractInput(f.Alice.Id, "TEST-" + Guid.NewGuid().ToString("N"), new DateOnly(2025, 1, 1), null));
         Assert.True(created.IsSuccessStatusCode, (await created.Content.ReadAsStringAsync()) + "\n" + f.Logs.Text);
         var contract = (await created.Content.ReadFromJsonAsync<ContractDto>())!;
@@ -95,6 +89,7 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         var approved = await hr2.PostAsJsonAsync("/api/contracts/" + contract.Id + "/transition", new ContractDecision("Approved", "Review complete", null, contract.ConcurrencyStamp));
         Assert.True(approved.IsSuccessStatusCode, (await approved.Content.ReadAsStringAsync()) + "\n" + f.Logs.Text);
     }
+
     [Fact]
     public async Task RegisterRejectsDuplicateClockingAndSelfApproval()
     {
@@ -105,26 +100,23 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         var session = (await response.Content.ReadFromJsonAsync<SessionDto>())!;
         Assert.Equal("Unverified", session.Evidence);
         Assert.False((await employee.PostAsJsonAsync("/api/attendance/clock-in", new ClockInput(f.Location.Id))).IsSuccessStatusCode);
-        response = await employee.PostAsJsonAsync("/api/attendance/clock-out", new
-        {
-        });
+        response = await employee.PostAsJsonAsync("/api/attendance/clock-out", new { });
         Assert.True(response.IsSuccessStatusCode, (await response.Content.ReadAsStringAsync()) + "\n" + f.Logs.Text);
         session = (await response.Content.ReadFromJsonAsync<SessionDto>())!;
         Assert.Equal(HttpStatusCode.Forbidden, (await employee.PostAsJsonAsync("/api/attendance/" + session.Id + "/review", new DecisionInput("Approved", "Own", session.ConcurrencyStamp))).StatusCode);
         response = await hr.PostAsJsonAsync("/api/attendance/" + session.Id + "/review", new DecisionInput("Approved", "Checked register", session.ConcurrencyStamp));
         Assert.True(response.IsSuccessStatusCode, (await response.Content.ReadAsStringAsync()) + "\n" + f.Logs.Text);
     }
+
     [Fact]
     public async Task LeaveRequiresManagerThenDifferentHr()
     {
         using var employee = await f.Client("alice");
         using var manager = await f.Client("manager");
         using var hr = await f.Client("hr");
-        var day = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(2)).AddDays(10);
+        var day = DateOnly.FromDateTime(f.Now.UtcDateTime.AddHours(2)).AddDays(10);
         while (day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
             day = day.AddDays(1);
-        if (day.Year != DateTime.UtcNow.AddHours(2).Year)
-            return;
         var response = await employee.PostAsJsonAsync("/api/leave/requests", new LeaveInput(f.Policy.Id, day, day, "Annual leave"));
         Assert.True(response.IsSuccessStatusCode, (await response.Content.ReadAsStringAsync()) + "\n" + f.Logs.Text);
         var request = (await response.Content.ReadFromJsonAsync<LeaveDto>())!;
@@ -139,12 +131,13 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         request = (await response.Content.ReadFromJsonAsync<LeaveDto>())!;
         Assert.Equal("Approved", request.Status);
     }
+
     [Fact]
     public async Task PayrollRequiresIndependentApprovalAndKeepsSnapshot()
     {
         using var hr = await f.Client("hr");
         using var hr2 = await f.Client("hr2");
-        var period = DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(-2).ToString("yyyy-MM");
+        var period = DateOnly.FromDateTime(f.Now.UtcDateTime).AddMonths(-2).ToString("yyyy-MM");
         var readiness = (await hr.GetFromJsonAsync<PayrollReadiness>("/api/payroll/readiness?period=" + period))!;
         Assert.True(readiness.Ready, string.Join(";", readiness.Issues));
         var response = await hr.PostAsJsonAsync("/api/payroll/runs", new RunInput(period));
@@ -161,6 +154,7 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         Assert.Equal(run.Hash, export.Hash);
         Assert.Contains(f.Alice.Id.ToString(), export.ContentJson);
     }
+
     [Fact]
     public async Task ApplyingMigrationsPreservesExistingTables()
     {
@@ -170,6 +164,7 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         q.CommandText = "SELECT Value FROM LegacySentinel WHERE Id=1";
         Assert.Equal("Preserved record", await q.ExecuteScalarAsync());
     }
+
     [Fact]
     public async Task ConcurrentClockInAllowsOnlyOneOpenSession()
     {
@@ -178,32 +173,30 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         var responses = await Task.WhenAll(a.PostAsJsonAsync("/api/attendance/clock-in", new ClockInput(f.Location.Id)), b.PostAsJsonAsync("/api/attendance/clock-in", new ClockInput(f.Location.Id)));
         Assert.Single(responses, x => x.IsSuccessStatusCode);
         Assert.DoesNotContain(responses, x => (int)x.StatusCode >= 500);
-        Assert.True((await a.PostAsJsonAsync("/api/attendance/clock-out", new
-        {
-        })).IsSuccessStatusCode);
+        Assert.True((await a.PostAsJsonAsync("/api/attendance/clock-out", new { })).IsSuccessStatusCode);
     }
+
     [Fact]
     public async Task ConcurrentOverlappingLeaveIsNotDoubleReserved()
     {
         using var a = await f.Client("outsider");
         using var b = await f.Client("outsider");
-        var day = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(2)).AddDays(18);
+        var day = DateOnly.FromDateTime(f.Now.UtcDateTime.AddHours(2)).AddDays(18);
         while (day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
             day = day.AddDays(1);
-        if (day.Year != DateTime.UtcNow.AddHours(2).Year)
-            return;
         var input = new LeaveInput(f.Policy.Id, day, day, "Concurrent reservation");
         var responses = await Task.WhenAll(a.PostAsJsonAsync("/api/leave/requests", input), b.PostAsJsonAsync("/api/leave/requests", input));
         Assert.Single(responses, x => x.IsSuccessStatusCode);
         Assert.DoesNotContain(responses, x => (int)x.StatusCode >= 500);
     }
+
     [Fact]
     public async Task PayslipsRemainPrivateUntilExplicitRelease()
     {
         using var hr = await f.Client("hr");
         using var hr2 = await f.Client("hr2");
         using var employee = await f.Client("alice");
-        var period = DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(-4).ToString("yyyy-MM");
+        var period = DateOnly.FromDateTime(f.Now.UtcDateTime).AddMonths(-4).ToString("yyyy-MM");
         var response = await hr.PostAsJsonAsync("/api/payroll/runs", new RunInput(period));
         Assert.True(response.IsSuccessStatusCode, (await response.Content.ReadAsStringAsync()) + f.Logs.Text);
         var run = (await response.Content.ReadFromJsonAsync<RunDto>())!;
@@ -216,39 +209,38 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         response = await hr.PostAsJsonAsync("/api/documents", new DocumentInput(f.Alice.Id, "payslip.pdf", "application/pdf", pdf, "Payslip"));
         Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
         var doc = (await response.Content.ReadFromJsonAsync<DocumentDto>())!;
-        Assert.True((await hr2.PostAsJsonAsync("/api/documents/" + doc.Id + "/verify", new
-        {
-        })).IsSuccessStatusCode);
+        Assert.True((await hr2.PostAsJsonAsync("/api/documents/" + doc.Id + "/verify", new DocumentVerificationInput("Payslip", "Verified payroll-provider payslip"))).IsSuccessStatusCode);
         response = await hr.PostAsJsonAsync("/api/payroll/runs/" + run.Id + "/payslips", new PayslipInput(f.Alice.Id, doc.Id));
         Assert.True(response.IsSuccessStatusCode, (await response.Content.ReadAsStringAsync()) + f.Logs.Text);
         var slip = (await response.Content.ReadFromJsonAsync<PayslipDto>())!;
         Assert.DoesNotContain((await employee.GetFromJsonAsync<List<PayslipDto>>("/api/payroll/payslips"))!, x => x.Id == slip.Id);
         Assert.Equal(HttpStatusCode.Forbidden, (await employee.GetAsync("/api/documents/" + doc.Id + "/download")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await employee.GetAsync("/api/payroll/payslips/" + slip.Id + "/download")).StatusCode);
-        Assert.True((await hr.PostAsJsonAsync("/api/payroll/payslips/" + slip.Id + "/release", new
-        {
-        })).IsSuccessStatusCode);
+        Assert.True((await hr.PostAsJsonAsync("/api/payroll/payslips/" + slip.Id + "/release", new { })).IsSuccessStatusCode);
         var download = (await employee.GetFromJsonAsync<DocumentContent>("/api/payroll/payslips/" + slip.Id + "/download"))!;
         Assert.Equal(pdf, download.ContentBase64);
     }
+
     [Fact]
     public async Task CorrectionAndOvertimeRequireIndependentReview()
     {
         using var scope = f.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MataHR.Persistence.WorkforceDbContext>();
-        var yesterday = DateTime.UtcNow.Date.AddDays(-1);
-        var session = new WorkSession { TenantId = f.TenantA, EmployeeId = f.Alice.Id, LocationId = f.Location.Id, Start = new DateTimeOffset(yesterday.AddHours(9), TimeSpan.Zero), End = new DateTimeOffset(yesterday.AddHours(17), TimeSpan.Zero), Date = DateOnly.FromDateTime(yesterday), Status = "Approved" };
+        var yesterday = f.Now.UtcDateTime.Date.AddDays(-1);
+        var session = new WorkSession(f.TenantA, f.Alice.Id, f.Location.Id, new DateTimeOffset(yesterday.AddHours(9), TimeSpan.Zero));
+        session.ClockOut(new DateTimeOffset(yesterday.AddHours(17), TimeSpan.Zero));
+        session.Review(true, Guid.NewGuid(), null, "Seed reviewed attendance");
         db.Add(session);
         await db.SaveChangesAsync();
         using var employee = await f.Client("alice");
         using var manager = await f.Client("manager");
-        var request = new TimeRequestInput("Correction", session.Id, session.Date, session.Start.AddHours(-1), session.End.Value, "Missing morning time");
+        var request = new TimeRequestInput("Correction", session.Id, session.Date, session.Start.AddHours(-1), session.End!.Value, "Missing morning time");
         var response = await employee.PostAsJsonAsync("/api/attendance/requests", request);
         Assert.True(response.IsSuccessStatusCode, (await response.Content.ReadAsStringAsync()) + f.Logs.Text);
         var correction = (await response.Content.ReadFromJsonAsync<TimeRequestDto>())!;
         response = await manager.PostAsJsonAsync("/api/attendance/requests/" + correction.Id + "/review", new DecisionInput("Approved", "Confirmed", correction.ConcurrencyStamp));
         Assert.True(response.IsSuccessStatusCode, (await response.Content.ReadAsStringAsync()) + f.Logs.Text);
-        request = new TimeRequestInput("Overtime", session.Id, session.Date, session.End.Value.AddHours(-1), session.End.Value, "Approved project work");
+        request = new TimeRequestInput("Overtime", session.Id, session.Date, session.End!.Value.AddHours(-1), session.End!.Value, "Approved project work");
         response = await employee.PostAsJsonAsync("/api/attendance/requests", request);
         Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
         var overtime = (await response.Content.ReadFromJsonAsync<TimeRequestDto>())!;

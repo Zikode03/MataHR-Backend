@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Domain.Repositories;
 using MataHR.Workforce.Contracts;
-namespace MataHR.Workforce;
 
+namespace MataHR.Workforce;
 public class DashboardAppService(IRepository<Worker, Guid> workers, IRepository<WorkforceAudit, Guid> audits, IRepository<WorkSession, Guid> sessions, IRepository<Absence, Guid> leave, IRepository<TimeRequest, Guid> timeRequests, IRepository<PayRun, Guid> runs) : WorkforceService(workers, audits), IDashboardAppService
 {
     [Authorize(WorkforcePermissions.Dashboard)]
@@ -21,6 +21,7 @@ public class DashboardAppService(IRepository<Worker, Guid> workers, IRepository<
             if (run != null)
                 payroll = System.Text.Json.JsonSerializer.Deserialize<List<PayrollRow>>(run.Snapshot)!.Sum(x => x.Basic + x.Allowance + x.OvertimePay + x.EmployerBenefits);
         }
+
         return new(from, to, people.Count(x => Active(x, to)), people.Count(x => x.Started >= from && x.Started <= to), ss.Where(x => x.Date == Today && x.Status != "Rejected").Select(x => x.EmployeeId).Distinct().Count(), ls.Where(x => x.Status == "Approved" && x.Start <= Today && x.End >= Today).Select(x => x.EmployeeId).Distinct().Count(), ls.Count(x => x.Status is "Pending" or "Cancellation pending"), ss.Count(x => x.Status == "Pending review"), ts.Count(x => x.Status == "Pending"), payroll);
     }
 }

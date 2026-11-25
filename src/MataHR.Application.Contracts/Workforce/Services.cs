@@ -1,14 +1,16 @@
 using Volo.Abp.Application.Services;
-namespace MataHR.Workforce.Contracts;
 
+namespace MataHR.Workforce.Contracts;
 public interface IAccountsAppService : IApplicationService
 {
+    Task SetRolePermissionAsync(RolePermissionInput input);
     Task<AccountDto> UpdateAsync(Guid id, AccountUpdateInput input);
     Task<Page<AccountDto>> GetListAsync(PageQuery input);
     Task<AccountDto> CreateAsync(AccountInput input);
     Task<AccountDto> SetActiveAsync(Guid id, ActiveAccountInput input);
     Task<Page<AuditDto>> GetAuditAsync(PageQuery input);
 }
+
 public interface IAttendanceAppService : IApplicationService
 {
     Task<List<LocationDto>> GetLocationsAsync();
@@ -23,17 +25,20 @@ public interface IAttendanceAppService : IApplicationService
     Task<TimeRequestDto> SubmitRequestAsync(TimeRequestInput input);
     Task<TimeRequestDto> ReviewRequestAsync(Guid id, DecisionInput input);
 }
+
 public interface IDashboardAppService : IApplicationService
 {
     Task<DashboardDto> GetAsync(DateOnly from, DateOnly to);
 }
+
 public interface IDocumentsAppService : IApplicationService
 {
     Task<List<DocumentDto>> GetListAsync(Guid employeeId);
     Task<DocumentDto> UploadAsync(DocumentInput input);
-    Task<DocumentDto> VerifyAsync(Guid id);
+    Task<DocumentDto> VerifyAsync(Guid id, DocumentVerificationInput input);
     Task<DocumentContent> DownloadAsync(Guid id);
 }
+
 public interface IEmployeesAppService : IApplicationService
 {
     Task<Page<EmployeeDto>> GetListAsync(PageQuery input);
@@ -45,6 +50,7 @@ public interface IEmployeesAppService : IApplicationService
     Task<ContractDto> CreateContractAsync(ContractInput input);
     Task<ContractDto> TransitionContractAsync(Guid id, ContractDecision input);
 }
+
 public interface ILeaveAppService : IApplicationService
 {
     Task<List<PolicyDto>> GetPoliciesAsync();
@@ -59,6 +65,7 @@ public interface ILeaveAppService : IApplicationService
     Task<LeaveDto> WithdrawAsync(Guid id, string concurrencyStamp);
     Task<LeaveDto> RequestCancellationAsync(Guid id, string concurrencyStamp);
 }
+
 public interface IOrganisationAppService : IApplicationService
 {
     Task<StructureDto> GetAsync();
@@ -68,6 +75,7 @@ public interface IOrganisationAppService : IApplicationService
     Task<EmployeeDto> AssignAsync(AssignmentInput input);
     Task SaveLayoutAsync(List<LayoutDto> input);
 }
+
 public interface IPayrollAppService : IApplicationService
 {
     Task<List<CompensationDto>> GetSalariesAsync();

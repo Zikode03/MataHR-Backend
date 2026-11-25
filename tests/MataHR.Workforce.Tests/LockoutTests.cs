@@ -2,8 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using MataHR.Workforce.Contracts;
 using Xunit;
-namespace MataHR.Workforce.Tests;
 
+namespace MataHR.Workforce.Tests;
 public class LockoutTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
 {
     [Fact]

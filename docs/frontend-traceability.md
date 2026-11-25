@@ -1,23 +1,17 @@
-# Frontend traceability baseline
-Frontend source revision: 71338c3381a24aebbbb1558c0c91f233890cc878.
-Scope: six Daily Workspace modules and four role workspaces. Existing API is retained as compatibility host until migration is tested.
+# Daily Workspace frontend integration boundary
 
-| Frontend model | Required workflow | Current backend |
+The supported backend is `MataHR.Workforce.Host`, with layered ABP services and native Identity, Permission Management and Audit Logging. The frontend demo stores have not yet been replaced with API clients. Backend completion does not imply frontend integration.
+
+| Module | Implemented backend workflow | Integration remaining |
 |---|---|---|
-| auth/previewSession | login, privacy, role-specific entry, logout | cookie login and privacy; manager/admin UI absent; recovery/MFA pending |
-| corehr/model | draft/review/approved/awaiting signature/signed, versioning, renewal, termination | basic contract endpoint; domain transition rules added, not wired |
-| corehr/model | documents, visibility, verification, expiry, requirements | pending secure storage |
-| corehr/model | personal information, probation, effective employment changes | pending; basic employment history only |
-| organisation/model | branches, departments, positions, assignments, reporting cycles | structured endpoints and composite tenant foreign keys added |
-| organisation/model | chart coordinates, routes, undo, remove/reassign reports | pending |
-| attendance/model | clock, schedule, locations, review, corrections, overtime | clock/review implemented; correction/overtime pending |
-| hrworkforce/model | policies, accrual, carry, holidays, balances, approvals | partial API; history, policy versioning, integration pending |
-| hrworkforce/model | payroll snapshot, overtime, benefits, payslips, mapping, export | partial API; overtime and secure files pending |
-| HRDashboard / EmployeeDashboard | scoped analytics and period filters | basic dashboard only |
-| administration/model | self-service, employee requests, audit | partial API; requests pending |
+| Authentication | Assigned roles, privacy gate, cookie/session revocation, lockout, password recovery, authenticator MFA | Frontend forms, MFA and recovery screens; production email configuration |
+| Employees | Scoped records, employment history, independent contract review and verified signed-copy evidence | Frontend DTO mapping; signature provider integration |
+| Documents | Protected upload/download, metadata-only listing, content hashes and attestation | Frontend API adapter; malware scanning and retention operations |
+| Organisation | Branches/departments/positions, reporting-cycle validation, chart coordinates and connector controls | Persist frontend canvas commands; undo orchestration |
+| Digital Register | Server-time clocking, schedules/locations, review, correction/overtime approval | Frontend API adapter; physical presence verification remains unverified |
+| Leave | Versioned policies, allocations/ledger, frozen working dates, cross-year reservations, manager/HR approval and cancellation | Frontend API adapter; historical import reconciliation |
+| Payroll & Benefits | Dated revisions, batched readiness, source fingerprints, independent approval, exports and released provider payslips | Frontend API adapter; external payroll provider/statutory calculation integration |
+| Dashboard | Scoped headcount, attendance, leave and payroll-input totals | Replace demo selectors with period-filtered API queries |
+| Administration | Native account/role management, persisted grants, audit metadata | Admin UI and production operations |
 
-## Architecture migration
-ABP 10.7.1 modules for domain shared, domain, application contracts, application, persistence and HTTP API are registered in the existing ASP.NET Core host. Organisation assignment is the first layered slice; remaining legacy endpoints still use direct EF access. ABP identity, permission management, multi-tenant data filters and audited repositories are not yet integrated. Custom tenant checks remain authoritative. No ABP commercial package required. Do not run on an existing SQL Server file from the old schema; use a disposable development database until migrations exist.
-
-## Acceptance gates
-Build and test every commit. Add tenant-boundary and role-scope HTTP tests, migration tests, contract lifecycle and document tests, concurrent leave and clock tests, payroll reconciliation, API schema and frontend integration tests. Never expose live HR data before production controls and review.
+Verification runs against disposable SQL databases, with tenant/role boundaries, workflow concurrency, historical payroll and security lifecycle regressions. Production startup remains disabled; real-data migration and service activation are separate operations.

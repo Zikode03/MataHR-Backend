@@ -7,10 +7,10 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Uow;
 using MataHR.Workforce.Contracts;
-namespace MataHR.Workforce;
 
+namespace MataHR.Workforce;
 [RemoteService(false)]
-public class WorkforceAuthenticationService(IRepository<WorkforceUser, Guid> accounts, IRepository<PrivacyAcceptance, Guid> privacy, IPasswordHasher<WorkforceUser> hasher, ICurrentTenant tenant, IUnitOfWorkManager units) : ITransientDependency
+public class WorkforceAuthenticationService(IRepository<PrivacyAcceptance, Guid> privacy, Volo.Abp.Identity.IdentityUserManager users, ICurrentTenant tenant, IUnitOfWorkManager units) : ITransientDependency
 {
     public const string PrivacyVersion = "workforce-1.0";
     [UnitOfWork(true)]
@@ -21,27 +21,54 @@ public class WorkforceAuthenticationService(IRepository<WorkforceUser, Guid> acc
         using (tenant.Change(input.TenantId))
         {
             var email = input.Email.Trim().ToLowerInvariant();
-            var account = await accounts.FindAsync(x => x.Email == email && x.Active);
-            if (account == null || account.LockedUntil > DateTimeOffset.UtcNow)
+            var account = await users.FindByEmailAsync(email);
+            if (account == null || !account.IsActive || await users.IsLockedOutAsync(account))
                 return null;
-            if (hasher.VerifyHashedPassword(account, account.PasswordHash, input.Password) == PasswordVerificationResult.Failed)
+            if (!await users.CheckPasswordAsync(account, input.Password))
             {
-                account.FailedLogins++;
-                if (account.FailedLogins >= 5)
-                {
-                    account.LockedUntil = DateTimeOffset.UtcNow.AddMinutes(15);
-                    account.FailedLogins = 0;
-                }
-                await accounts.UpdateAsync(account);
+                await users.AccessFailedAsync(account);
                 await units.Current!.SaveChangesAsync();
                 return null;
             }
-            account.FailedLogins = 0;
-            account.LockedUntil = null;
-            await accounts.UpdateAsync(account);
-            return new(account.Id, account.TenantId!.Value, account.Email, account.Roles.Split(','), account.EmployeeId);
+
+            await users.ResetAccessFailedCountAsync(account);
+            var requiresMfa = await users.GetTwoFactorEnabledAsync(account);
+            return new(account.Id, account.TenantId!.Value, account.Email, (await users.GetRolesAsync(account)).Order().ToArray(), account.GetProperty<Guid?>("EmployeeId"), account.SecurityStamp, requiresMfa);
         }
     }
+
+    [UnitOfWork]
+    public virtual async Task<AuthAccountDto> RefreshSessionAsync(Guid tenantId, Guid id)
+    {
+        using (tenant.Change(tenantId))
+        {
+            var user = await users.FindByIdAsync(id.ToString());
+            if (user == null || !user.IsActive)
+                throw new Volo.Abp.Authorization.AbpAuthorizationException();
+            return new(user.Id, tenantId, user.Email, (await users.GetRolesAsync(user)).Order().ToArray(), user.GetProperty<Guid?>("EmployeeId"), user.SecurityStamp);
+        }
+    }
+
+    [UnitOfWork(true)]
+    public virtual async Task<AuthAccountDto?> CompleteMfaAsync(Guid tenantId, Guid id, string stamp, string code, bool recovery)
+    {
+        using (tenant.Change(tenantId))
+        {
+            var user = await users.FindByIdAsync(id.ToString());
+            if (user == null || !user.IsActive || user.SecurityStamp != stamp || !await users.GetTwoFactorEnabledAsync(user) || await users.IsLockedOutAsync(user))
+                return null;
+            bool valid = recovery ? (await users.RedeemTwoFactorRecoveryCodeAsync(user, code)).Succeeded : await users.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider, code.Replace(" ", ""));
+            if (!valid)
+            {
+                await users.AccessFailedAsync(user);
+                return null;
+            }
+
+            await users.ResetAccessFailedCountAsync(user);
+            return new(user.Id, tenantId, user.Email, (await users.GetRolesAsync(user)).Order().ToArray(), user.GetProperty<Guid?>("EmployeeId"), user.SecurityStamp);
+        }
+    }
+
     [UnitOfWork(true)]
     public virtual async Task AcknowledgeAsync(Guid accountId)
     {
