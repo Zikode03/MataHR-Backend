@@ -271,6 +271,3 @@ public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/payroll/salaries")).StatusCode);
     }
 }
-
-
-
