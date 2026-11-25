@@ -10,6 +10,16 @@ namespace MataHR.Workforce.Tests;
 public class BoundaryTests(WorkforceFixture f) : IClassFixture<WorkforceFixture>
 {
     [Fact]
+    public async Task OpenApiDocumentCanBeGeneratedWithDateOnlyContracts()
+    {
+        using var client = f.Factory.CreateClient();
+        var response = await client.GetAsync("/openapi/v1.json");
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync() + "\n" + f.Logs.Text);
+        using var schema = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(schema.RootElement.GetProperty("paths").TryGetProperty("/api/employees", out _));
+    }
+
+    [Fact]
     public async Task AnonymousAndMissingCsrfAreRejected()
     {
         using var c = f.Factory.CreateClient();
