@@ -62,6 +62,7 @@ public class WorkforceFixture : IAsyncLifetime
             b.ConfigureServices(services =>
             {
                 services.Replace(ServiceDescriptor.Singleton<TimeProvider>(new FixedClock()));
+                Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IAccountRecoveryDelivery) && descriptor.ImplementationType == typeof(MataHR.Workforce.Host.EmailRecoveryDelivery));
                 services.Replace(ServiceDescriptor.Singleton<IAccountRecoveryDelivery>(Recovery));
                 services.AddSingleton<IStartupFilter, TestClientNetwork>();
             });
