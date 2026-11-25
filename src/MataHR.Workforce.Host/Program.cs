@@ -113,8 +113,10 @@ using (var scope = app.Services.CreateScope())
                 var account = new Volo.Abp.Identity.IdentityUser(Guid.NewGuid(), email.Trim().ToLowerInvariant(), email.Trim().ToLowerInvariant(), tenant);
                 var result = await manager.CreateAsync(account, password);
                 if (!result.Succeeded)
-                    throw new InvalidOperationException("Could not seed initial administrator.");
-                await manager.AddToRoleAsync(account, "Admin");
+                    throw new InvalidOperationException("Bootstrap administrator creation failed (" + string.Join(", ", result.Errors.Select(x => x.Code)) + "). Check Bootstrap:Email and Bootstrap:Password against the configured Identity policy.");
+                var assigned = await manager.AddToRoleAsync(account, "Admin");
+                if (!assigned.Succeeded)
+                    throw new InvalidOperationException("Bootstrap administrator role assignment failed (" + string.Join(", ", assigned.Errors.Select(x => x.Code)) + ").");
                 await uow.CompleteAsync();
             }
         }
