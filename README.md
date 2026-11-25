@@ -1,49 +1,51 @@
-# MataHR Backend
+# MataHR — ABP Daily Workspace backend
 
-First backend implementation for the six Daily Workspace modules. ASP.NET Core 10, EF Core SQL Server, modular endpoints, tenant-scoped records and cookie authentication. **Development only; production startup deliberately disabled.** Public repository: never commit employee data, passwords or database files.
+ASP.NET Core 10 and ABP Framework 10.7.1 with SQL Server, typed application services, ABP repositories, tenant filters, permissions, units of work and audited aggregates.
 
-## Run locally (Windows PowerShell, Docker Desktop and SSMS)
-Install .NET 10 SDK. Copy .env.example to .env and set a strong unique development password. Start SQL Server:
+The new API host is **src/MataHR.Workforce.Host**. It implements Dashboard, Employees, Organisation, Digital Register, Leave Management and Payroll & Benefits. The original `MataHR.Api` project remains a legacy reference. It has not been replaced as the active local API.
+
+See the [backend guide](docs/daily-workspace-backend.md) for architecture, workflows, endpoint conventions and remaining production work.
+
+## Local configuration
+
+| Setting | Value |
+|---|---|
+| SQL host | localhost,14336 |
+| Docker SQL internal port | 1433 |
+| Database | MataHR |
+| API | https://localhost:7043 |
+| Health | /health |
+| OpenAPI | /openapi/v1.json |
+
+Keep the SQL password in the ignored `.env` as `MSSQL_SA_PASSWORD`. Use literal single quotes for dotenv values containing dollar signs. Do not commit credentials. Account passwords and the SQL password are different credentials.
+
 ```powershell
 docker compose up -d
-docker compose ps
+pwsh -File scripts/Start-Workforce.ps1
 ```
-In SSMS connect to localhost,14336 using SQL Server Authentication, login sa and the password in .env. Enable Trust server certificate for local development only. If port 14336 is occupied, set MSSQL_PORT in .env and use that port in SSMS and the connection string.
-In PowerShell, set the connection string without committing secrets:
+
+Normal startup requires the reviewed Workforce migrations to have been applied. First-time **development** migration is a deliberate opt-in:
+
 ```powershell
-$secret = Read-Host "SQL Server development password" -MaskInput
-$env:ConnectionStrings__Default = "Server=localhost,14336;Database=MataHR;User Id=sa;Password=$secret;Encrypt=True;TrustServerCertificate=True"
-$env:ASPNETCORE_ENVIRONMENT = "Development"
-$env:Database__InitializeDevelopmentSchema = "true"
-$env:Bootstrap__Email = Read-Host "Initial administrator email"
-$env:Bootstrap__Password = Read-Host "Initial administrator password (14+ characters)" -MaskInput
-dotnet dev-certs https --trust
-dotnet run --project src/MataHR.Api --urls https://localhost:7043
-```
-The explicit development initializer creates an empty database schema. It does not upgrade existing schemas. Production startup remains disabled; reviewed EF migrations and a least-privileged application login must replace this bootstrap before deployment. Do not delete existing databases or Docker volumes. Bootstrap creates one tenant and Admin on an empty database. Obtain tenant ID from Tenants in SSMS. OpenAPI: /openapi/v1.json. Use same-origin HTTPS reverse proxy; POST/PUT require X-MataHR-Request: 1. Authenticate with tenantId, email, password and acknowledge /api/auth/privacy. Tests require MATAHR_TEST_SQL targeting a disposable SQL Server; CI supplies an isolated container.
-
-## Roles
-Admin provisions accounts and reads redacted audit metadata; no automatic access to employee salary/personnel data. HR manages staff, leave and payroll. Manager can read direct reports and review team attendance/leave. Employee reads own records, clocks and submits own leave. Multiple assigned roles supported. Authentication validates active account and current roles per request.
-
-## Delivered endpoints
-- /api/auth/login, logout, me, privacy
-- /api/admin/accounts, audit
-- /api/employees, employees/{id}/history, employees/{id}/contracts, /api/contracts
-- /api/organisation/departments
-- /api/attendance, attendance/locations, attendance/schedules, attendance/clock-in, attendance/clock-out, attendance/{id}/review
-- /api/leave/policies, holidays, entitlements, balances/{employee}, requests, requests/{id}/review, requests/{id}/withdraw
-- /api/payroll/salaries, benefits, runs, runs/{id}/transition, runs/{id}/export (approved JSON snapshot)
-- /api/integrations, /api/dashboard
-
-## Rules
-Server clock in SAST, unverified presence, open-session uniqueness, approved leave conflict. Leave uses configured workdays and holidays, one calendar-year cycle, manual entitlement and carry-over, current-month simplified accrual, pending reservations and staged reviews. Payroll uses reviewed attendance, unpaid leave and salary/benefits snapshots; outstanding or changed inputs block review/approval; reviewer and approver must differ. No payroll tax or net-pay calculations.
-
-## Not complete
-Frontend is not wired to this API. DTO mapping from existing string demo IDs to GUIDs is needed. No ABP dependency (plain ASP.NET Core selected for this initial foundation). Missing contract lifecycle/signatures, document and payslip secure storage, full organisation positions/branches, attendance corrections/overtime endpoints, approved leave cancellation, versioned policies/schedules, full payroll export mapping and provider synchronization. No real GPS/QR/biometrics, account lifecycle/recovery/MFA, tenant onboarding, migration scripts, production database, deployment or compliance certification. Privacy notice content and operational safeguards require review. SQL Server EnsureCreated is development-only. Security, concurrent transactions and all cross-role/tenant workflows require integration testing. Do not use real personnel data.
-
-```sh
-dotnet test tests/MataHR.Tests/MataHR.Tests.csproj
+pwsh -File scripts/Start-Workforce.ps1 -ApplyDevelopmentMigrations
 ```
 
-## Enterprise foundation branch
-ABP modular foundation (10.7.1), domain rules and first structured organisation slice added. See [frontend traceability](docs/frontend-traceability.md). Existing API host remains the entry point. Use a fresh disposable SQL Server database because schema migration is not implemented. This is not the complete ABP identity/permission migration.
+The migration adds `Mata*` tables and preserves legacy tables. It does not import legacy records. Review/import existing data before activating the new host. Your local database has not been migrated as part of the staged implementation.
+
+In Visual Studio, open `MataHR.sln`. Select `MataHR.Workforce.Host` only when ready to activate it. Its launch profile uses .NET User Secrets for the connection string; never put the database password in launchSettings. The Development-only managed SQL networking option supports `localhost` on this machine and does not change SSMS.
+
+## Verification
+
+```powershell
+pwsh -File scripts/Test-Workforce.ps1
+```
+
+Tests use GUID-named disposable databases on the local SQL instance. Cleanup verifies the test database prefix; it does not target `MataHR`. Tests cover tenant/role scope, real authentication and privacy, account lockout, optimistic concurrency, migration preservation, concurrent clock and leave requests, independent approvals, documents, contracts, payroll and private payslip release.
+
+CI builds `MataHR.Workforce.Host` and runs `MataHR.Workforce.Tests` against an isolated SQL Server container. Restore migration tooling with `dotnet tool restore` if generating a future migration.
+
+## API and permissions
+
+All writes require `X-MataHR-Request: 1`. Login uses assigned accounts at `/api/auth/login`; accept the current notice at `/api/auth/privacy` before accessing workforce data. Roles are Admin, HR, Manager and Employee. Admin has no automatic personnel or payroll access; managers are scoped to direct reports; employees access their own records.
+
+The frontend remains a separate demo until its stores and DTOs are connected to this API. Payroll implements reconciled inputs, benefits, overtime, approval, export and provider payslip release. Statutory tax calculations, payment instructions and live payroll-provider integrations are not implemented. Production startup remains disabled pending operational and security work described in the guide.

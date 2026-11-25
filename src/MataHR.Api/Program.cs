@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 var b=WebApplication.CreateBuilder(args);
+if(b.Environment.IsDevelopment()&&b.Configuration.GetValue<bool>("Database:UseManagedNetworkingOnWindows"))
+ AppContext.SetSwitch("Switch.Microsoft.Data.SqlClient.UseManagedNetworkingOnWindows",true);
 var connection=b.Configuration.GetConnectionString("Default");
 if(string.IsNullOrWhiteSpace(connection))throw new InvalidOperationException("Configure ConnectionStrings__Default for Microsoft SQL Server.");
 b.Services.AddDbContext<Db>(o=>o.UseSqlServer(connection));

@@ -6,3 +6,12 @@
 .env
 appsettings.Local.json
 TestResults/
+
+.local/
+.vs/
+*.user
+*.suo
+.env.*
+!.env.example
+*.pfx
+*.key
