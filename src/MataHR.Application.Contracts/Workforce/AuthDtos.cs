@@ -18,3 +18,5 @@ public interface IAccountRecoveryDelivery
 
     Task SendAsync(Guid tenantId, string email, string token);
 }
+public record AdminOverviewDto(long TotalAccounts, long ActiveAccounts, long InactiveAccounts, long LockedAccounts, IReadOnlyList<RoleCountDto> Roles);
+public record RoleCountDto(string Role, long Count);

@@ -7,7 +7,7 @@ using Volo.Abp.Uow;
 using MataHR.Workforce.Contracts;
 
 namespace MataHR.Workforce;
-public class AccountsAppService(IRepository<Worker, Guid> workers, IRepository<WorkforceAudit, Guid> audits, IRepository<Volo.Abp.Identity.IdentityUser, Guid> accounts, Volo.Abp.Identity.IdentityUserManager users, Volo.Abp.PermissionManagement.IPermissionManager grants) : WorkforceService(workers, audits), IAccountsAppService
+public class AccountsAppService(IRepository<Worker, Guid> workers, IRepository<WorkforceAudit, Guid> audits, IRepository<Volo.Abp.Identity.IdentityUser, Guid> accounts, IRepository<Volo.Abp.Identity.IdentityRole, Guid> roles, Volo.Abp.Identity.IdentityUserManager users, Volo.Abp.PermissionManagement.IPermissionManager grants) : WorkforceService(workers, audits), IAccountsAppService
 {
     [Authorize(WorkforcePermissions.Accounts)]
     public virtual async Task<Page<AccountDto>> GetListAsync(PageQuery input)
@@ -103,6 +103,22 @@ public class AccountsAppService(IRepository<Worker, Guid> workers, IRepository<W
         return result;
     }
 
+    [Authorize(WorkforcePermissions.Accounts)]
+    public virtual async Task<AdminOverviewDto> GetOverviewAsync()
+    {
+        var query = await accounts.GetQueryableAsync();
+        var total = await Queries.LongCountAsync(query);
+        var active = await Queries.LongCountAsync(query.Where(x => x.IsActive));
+        var now = DateTimeOffset.UtcNow;
+        var locked = await Queries.LongCountAsync(query.Where(x => x.LockoutEnabled && x.LockoutEnd > now));
+        var counts = new List<RoleCountDto>();
+        foreach (var name in new[] { "Admin", "HR", "Manager", "Employee" })
+        {
+            var role = await roles.FindAsync(x => x.Name == name);
+            counts.Add(new(name, role == null ? 0 : await Queries.LongCountAsync(query.Where(x => x.Roles.Any(r => r.RoleId == role.Id)))));
+        }
+        return new(total, active, total - active, locked, counts);
+    }
     async Task<AccountDto> Dto(Volo.Abp.Identity.IdentityUser x) => new(x.Id, x.Email, (await users.GetRolesAsync(x)).ToArray(), x.GetProperty<Guid?>("EmployeeId"), x.IsActive, x.ConcurrencyStamp);
     async Task<List<AccountDto>> Dtos(List<Volo.Abp.Identity.IdentityUser> rows)
     {

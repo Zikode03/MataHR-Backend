@@ -17,6 +17,21 @@ public class ConnectedWorkspaceTests(WorkforceFixture f) : IClassFixture<Workfor
     }
 
     [Fact]
+    public async Task AdministratorOverviewIsScopedAndRequiresAccountPermission()
+    {
+        using var admin = await f.Client("admin");
+        using var employee = await f.Client("alice");
+        using var foreign = await f.Client("foreign");
+        var overview = await admin.GetFromJsonAsync<AdminOverviewDto>("/api/admin/overview");
+        Assert.NotNull(overview);
+        Assert.Equal(overview.TotalAccounts, overview.ActiveAccounts + overview.InactiveAccounts);
+        Assert.True(overview.Roles.Single(x => x.Role == "Admin").Count > 0);
+        var accounts = await admin.GetFromJsonAsync<Page<AccountDto>>("/api/admin/accounts?maxResultCount=1");
+        Assert.Equal(accounts!.TotalCount, overview.TotalAccounts);
+        Assert.Equal(HttpStatusCode.Forbidden, (await employee.GetAsync("/api/admin/overview")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await foreign.GetAsync("/api/admin/overview")).StatusCode);
+    }
+    [Fact]
     public async Task PresenceRequiresFreshCodeAccurateGeofenceAndPreventsReplay()
     {
         using var hr = await f.Client("hr");

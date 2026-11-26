@@ -3,6 +3,7 @@ using Volo.Abp.Application.Services;
 namespace MataHR.Workforce.Contracts;
 public interface IAccountsAppService : IApplicationService
 {
+    Task<AdminOverviewDto> GetOverviewAsync();
     Task<List<EmployeeLinkDto>> GetEmployeeLinksAsync();
     Task<List<RoleGrantDto>> GetRoleGrantsAsync(string role);
     Task SetRolePermissionAsync(RolePermissionInput input);

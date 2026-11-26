@@ -8,6 +8,8 @@ namespace MataHR.HttpApi;
 [Authorize, Route("api/admin"), ApiController]
 public class AccountsController(IAccountsAppService service) : AbpController
 {
+    [Authorize(WorkforcePermissions.Accounts), HttpGet("overview")]
+    public Task<AdminOverviewDto> Overview() => service.GetOverviewAsync();
     [HttpGet("employee-links")]
     public Task<List<EmployeeLinkDto>> EmployeeLinks() => service.GetEmployeeLinksAsync();
     [HttpGet("role-permissions")]

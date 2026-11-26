@@ -192,6 +192,12 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
     });
 }
 
+app.MapGet("/api/auth/antiforgery", (HttpContext context, Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery, Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Antiforgery.AntiforgeryOptions> options) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    var tokens = antiforgery.GetAndStoreTokens(context);
+    return Results.Ok(new { requestToken = tokens.RequestToken, headerName = options.Value.HeaderName });
+}).AllowAnonymous();
 app.MapGet("/api/auth/config", () => Results.Ok(new { tenantId = b.Configuration["Bootstrap:TenantId"] })).AllowAnonymous();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
