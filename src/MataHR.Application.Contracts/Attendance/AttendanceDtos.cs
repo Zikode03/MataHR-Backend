@@ -1,0 +1,11 @@
+namespace MataHR.Attendance.Contracts;
+public record LocationDto(Guid Id, string Name, string Kind, bool Active, double? Latitude = null, double? Longitude = null, int RadiusMeters = 150);
+public record LocationInput(string Name, string Kind);
+public record ScheduleInput(Guid EmployeeId, int DaysMask, TimeOnly Start, TimeOnly End, int GraceMinutes);
+public record ScheduleDto(Guid EmployeeId, int DaysMask, TimeOnly Start, TimeOnly End, int GraceMinutes);
+public record SessionDto(Guid Id, Guid EmployeeId, Guid LocationId, DateOnly Date, DateTimeOffset Start, DateTimeOffset? End, string Status, string Evidence, string ConcurrencyStamp, string ExceptionReason = "", double? DistanceMeters = null, double? AccuracyMeters = null);
+public record ClockInput(Guid LocationId, string? SiteCode = null, double? Latitude = null, double? Longitude = null, double? AccuracyMeters = null, DateTimeOffset? ObservedAt = null, string? ExceptionReason = null);
+public record TimeRequestInput(string Kind, Guid? SessionId, DateOnly Date, DateTimeOffset Start, DateTimeOffset End, string Reason);
+public record TimeRequestDto(Guid Id, Guid EmployeeId, string Kind, Guid? SessionId, DateOnly Date, DateTimeOffset Start, DateTimeOffset End, string Reason, string Status, string ConcurrencyStamp);
+public record SiteBoundaryInput(double Latitude, double Longitude, int RadiusMeters);
+public record PresenceCodeDto(string Code, DateTimeOffset ExpiresAt);

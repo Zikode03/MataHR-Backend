@@ -1,6 +1,6 @@
 # Daily Workspace ABP backend
 
-The new entry point is `src/MataHR.Workforce.Host`. The original `MataHR.Api` is retained as archived source, excluded from the supported solution. It is not the ABP workflow host. The companion frontend default entry point now uses the live API; unconnected module prototypes remain source references.
+The new entry point is `src/MataHR.HttpApi.Host`. The original `MataHR.Api` is retained as archived source, excluded from the supported solution. It is not the ABP workflow host. The companion frontend default entry point now uses the live API; unconnected module prototypes remain source references.
 
 ## Architecture
 
@@ -43,13 +43,14 @@ MataHR therefore prepares and reconciles payroll inputs, locks approved snapshot
 
 Keep the API stopped while changing its startup project. Start Docker SQL with `docker compose up -d`. Use the existing ignored `.env` for the actual SQL password; quote dollar signs literally in dotenv values. Standard host port: `14336`; database: `MataHR`.
 
-First review `src/MataHR.EntityFrameworkCore/Workforce/Migrations`, then apply the additive development migration explicitly:
+First review `src/MataHR.EntityFrameworkCore/Migrations`, then apply the additive development migration explicitly:
 
 ```powershell
-pwsh -File scripts/Start-Workforce.ps1 -ApplyDevelopmentMigrations
+pwsh -File scripts/Migrate-Workforce.ps1
+pwsh -File scripts/Start-Workforce.ps1
 ```
 
-Subsequent starts use `pwsh -File scripts/Start-Workforce.ps1`. The host is `https://localhost:7043`, health is `/health`, and OpenAPI is `/openapi/v1.json`. Visual Studio: open `MataHR.sln`, select `MataHR.Workforce.Host` as startup project, and use its launch profile. It shares the local UserSecretsId already configured for the database connection. No credentials belong in launchSettings or appsettings.
+Subsequent starts use `pwsh -File scripts/Start-Workforce.ps1`. The host is `https://localhost:7043`, health is `/health`, and OpenAPI is `/openapi/v1.json`. Visual Studio: open `MataHR.sln`, select `MataHR.HttpApi.Host` as startup project, and use its launch profile. It shares the local UserSecretsId already configured for the database connection. No credentials belong in launchSettings or appsettings.
 
 The managed-networking switch is Development-only and applies to SqlClient, not SSMS. See [Microsoft's documentation](https://learn.microsoft.com/en-us/sql/connect/ado-net/appcontext-switches).
 

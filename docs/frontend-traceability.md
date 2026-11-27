@@ -1,6 +1,6 @@
 # Connected Daily Workspace traceability
 
-The default React entry point mounts the live API workspace. Demo stores are not a fallback. The supported backend is `MataHR.Workforce.Host`, with ABP Identity, persisted Permission Management, Audit Logging and tenant-filtered repositories.
+The default React entry point mounts the live API workspace. Demo stores are not a fallback. The supported backend is `MataHR.HttpApi.Host`, with ABP Identity, persisted Permission Management, Audit Logging and tenant-filtered repositories.
 
 | Area | Connected frontend and server behavior | Remaining boundary |
 |---|---|---|

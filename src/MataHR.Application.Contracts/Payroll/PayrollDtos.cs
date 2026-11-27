@@ -1,0 +1,12 @@
+namespace MataHR.Payroll.Contracts;
+public record CompensationInput(Guid EmployeeId, decimal Basic, decimal Allowance, decimal Deduction, decimal HourlyRate, decimal OvertimeMultiplier, DateOnly EffectiveFrom);
+public record CompensationDto(Guid EmployeeId, decimal Basic, decimal Allowance, decimal Deduction, decimal HourlyRate, decimal OvertimeMultiplier, DateOnly EffectiveFrom);
+public record BenefitInput(Guid EmployeeId, string Name, decimal Employer, decimal EmployeeCost, DateOnly EffectiveFrom, DateOnly? EffectiveTo = null);
+public record BenefitDto(Guid Id, Guid EmployeeId, string Name, decimal Employer, decimal EmployeeCost, bool Active, DateOnly EffectiveFrom, DateOnly? EffectiveTo = null);
+public record PayrollRow(Guid EmployeeId, string Number, decimal Basic, decimal Allowance, decimal Deduction, decimal EmployerBenefits, decimal EmployeeBenefits, decimal ApprovedHours, decimal OvertimeHours, decimal OvertimePay, int UnpaidDays, int Pending, string SourceFingerprint = "");
+public record PayrollReadiness(string Period, bool Ready, IReadOnlyList<string> Issues, IReadOnlyList<PayrollRow> Rows);
+public record RunDto(Guid Id, string Period, string Status, string Hash, Guid? PreparedBy, Guid? ReviewedBy, Guid? ApprovedBy, string ConcurrencyStamp);
+public record RunInput(string Period);
+public record ExportDto(string Period, string Hash, string ContentJson);
+public record PayslipInput(Guid EmployeeId, Guid DocumentId);
+public record PayslipDto(Guid Id, Guid EmployeeId, Guid RunId, Guid DocumentId, bool Released);

@@ -8,6 +8,6 @@ $old=[Environment]::GetEnvironmentVariable('MATAHR_TEST_SQL')
 try {
  $port=if($settings.MSSQL_PORT){$settings.MSSQL_PORT}else{'14336'}
  $env:MATAHR_TEST_SQL="Server=localhost,$port;Database=master;User Id=sa;Password=$($settings.MSSQL_SA_PASSWORD);Encrypt=True;TrustServerCertificate=True"
- & dotnet test (Join-Path $repoRoot 'tests/MataHR.Workforce.Tests') --artifacts-path (Join-Path $repoRoot '.local/workforce-tests') --verbosity minimal
+ & dotnet test (Join-Path $repoRoot 'tests/MataHR.IntegrationTests') --artifacts-path (Join-Path $repoRoot '.local/workforce-tests') --verbosity minimal
  if($LASTEXITCODE -ne 0){throw 'Workforce integration tests failed.'}
 } finally {[Environment]::SetEnvironmentVariable('MATAHR_TEST_SQL',$old)}

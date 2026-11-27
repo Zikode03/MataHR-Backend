@@ -1,0 +1,12 @@
+namespace MataHR.Organisation.Contracts;
+public record BranchDto(Guid Id, string Name);
+public record DepartmentDto(Guid Id, Guid BranchId, string Name);
+public record PositionDto(Guid Id, Guid DepartmentId, string Name);
+public record StructureDto(IReadOnlyList<BranchDto> Branches, IReadOnlyList<DepartmentDto> Departments, IReadOnlyList<PositionDto> Positions, IReadOnlyList<OrganisationPersonDto> Employees, IReadOnlyList<LayoutDto> Layout, ChartPointDto? Company = null);
+public record BranchInput(string Name);
+public record DepartmentInput(Guid BranchId, string Name);
+public record PositionInput(Guid DepartmentId, string Name);
+public record AssignmentInput(Guid EmployeeId, Guid? PositionId, Guid? ManagerId, string ConcurrencyStamp);
+public record LayoutDto(Guid EmployeeId, double X, double Y, string Connector);
+public record ChartPointDto(double X, double Y);
+public record OrganisationPersonDto(Guid Id, string Number, string Name, Guid? PositionId, Guid? ManagerId, bool Active, string ConcurrencyStamp);

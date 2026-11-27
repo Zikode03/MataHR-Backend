@@ -1,4 +1,0 @@
-{
- "$schema":"https://json.schemastore.org/launchsettings.json",
- "profiles":{"MataHR.Workforce.Host":{"commandName":"Project","dotnetRunMessages":true,"launchBrowser":true,"launchUrl":"swagger","applicationUrl":"https://localhost:7043","environmentVariables":{"ASPNETCORE_ENVIRONMENT":"Development","Database__UseManagedNetworkingOnWindows":"true"}}}
-}
